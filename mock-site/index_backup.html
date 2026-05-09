@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NVIDIA NPN 파트너 관리 기획서</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root {
+  --green:#76B900; --green-light:#e8f5cc; --green-dark:#558800;
+  --navy:#1A1A2E;  --navy-light:#2d2d4a;
+  --gray-100:#f7f8fa; --gray-200:#eef0f3; --gray-300:#dde0e6;
+  --gray-500:#8a909e; --gray-700:#4a5060; --gray-900:#1e2330;
+  --white:#ffffff;
+  --blue-light:#daeaf6; --yellow-light:#fff8e1;
+  --radius:10px; --shadow:0 2px 12px rgba(0,0,0,.08);
+  --sidebar-w:220px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--gray-100);color:var(--gray-900);display:flex;min-height:100vh;}
+
+/* ─── SIDEBAR ─── */
+#sidebar{
+  width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--navy);
+  display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;
+  overflow-y:auto;z-index:100;
+}
+.sidebar-logo{padding:24px 20px 16px;border-bottom:1px solid rgba(255,255,255,.1);}
+.sidebar-logo .brand{color:var(--green);font-weight:700;font-size:18px;letter-spacing:-.3px;}
+.sidebar-logo .sub{color:rgba(255,255,255,.5);font-size:10px;margin-top:2px;}
+.nav-section{padding:18px 0 4px 18px;font-size:10px;font-weight:700;color:rgba(255,255,255,.35);letter-spacing:1px;text-transform:uppercase;}
+.nav-item{
+  display:flex;align-items:center;gap:9px;padding:9px 18px;
+  color:rgba(255,255,255,.65);font-size:13px;cursor:pointer;
+  transition:all .15s;border-left:3px solid transparent;
+}
+.nav-item:hover{background:rgba(255,255,255,.07);color:#fff;}
+.nav-item.active{background:rgba(118,185,0,.15);color:var(--green);border-left-color:var(--green);}
+.nav-item .icon{font-size:15px;width:18px;text-align:center;}
+
+/* ─── MAIN ─── */
+#main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;}
+#topbar{
+  background:#fff;border-bottom:1px solid var(--gray-300);
+  padding:14px 32px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:50;
+}
+.topbar-title{font-size:15px;font-weight:700;color:var(--gray-900);}
+.topbar-meta{font-size:12px;color:var(--gray-500);}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;}
+.badge-green{background:var(--green-light);color:var(--green-dark);}
+.badge-navy{background:#e8e8f0;color:var(--navy);}
+.badge-blue{background:var(--blue-light);color:#1a6fa0;}
+.badge-yellow{background:var(--yellow-light);color:#7a5c00;}
+
+#content{padding:32px;display:flex;flex-direction:column;gap:28px;}
+
+/* ─── SECTION ─── */
+.section{display:none;}
+.section.active{display:flex;flex-direction:column;gap:24px;}
+.section-title{font-size:22px;font-weight:700;color:var(--gray-900);border-left:4px solid var(--green);padding-left:14px;}
+.section-desc{font-size:13px;color:var(--gray-500);margin-top:4px;padding-left:18px;}
+
+/* ─── CARD ─── */
+.card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;}
+.card-title{font-size:15px;font-weight:700;color:var(--gray-900);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.card-title .num{background:var(--navy);color:#fff;border-radius:6px;padding:2px 8px;font-size:12px;}
+
+/* ─── STAT CARDS ─── */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;}
+.stat-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px;border-top:3px solid var(--green);}
+.stat-label{font-size:11px;color:var(--gray-500);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+.stat-value{font-size:26px;font-weight:700;color:var(--gray-900);margin:6px 0 2px;}
+.stat-sub{font-size:11px;color:var(--gray-500);}
+.stat-input{font-size:26px;font-weight:700;color:var(--gray-900);width:80px;border:none;border-bottom:2px dashed var(--green);background:transparent;outline:none;text-align:center;}
+
+/* ─── TABLE ─── */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{background:var(--navy);color:#fff;padding:10px 12px;text-align:center;font-weight:600;font-size:12px;white-space:nowrap;}
+thead th:first-child{text-align:left;}
+tbody tr:nth-child(even){background:var(--gray-100);}
+tbody td{padding:9px 12px;border-bottom:1px solid var(--gray-200);color:var(--gray-700);text-align:center;}
+tbody td:first-child{text-align:left;font-weight:500;color:var(--gray-900);}
+.tfoot-row td{background:var(--navy);color:#fff;font-weight:700;padding:10px 12px;}
+input.num-input{
+  width:90px;border:1.5px solid var(--gray-300);border-radius:6px;
+  padding:5px 8px;text-align:right;font-size:13px;font-family:inherit;
+  transition:border .15s;outline:none;
+}
+input.num-input:focus{border-color:var(--green);}
+input.num-input:not(:placeholder-shown){background:var(--green-light);}
+.calc-cell{background:var(--green-light);color:var(--green-dark);font-weight:600;border-radius:6px;padding:4px 8px;display:inline-block;min-width:60px;text-align:center;}
+.calc-cell.neg{background:#fde8e8;color:#c0392b;}
+
+/* ─── HEATMAP ─── */
+.heatmap-table th{white-space:nowrap;font-size:11px;}
+.hm-input{width:80px;border:1.5px solid var(--gray-300);border-radius:6px;padding:4px 6px;text-align:right;font-size:12px;font-family:inherit;outline:none;transition:all .15s;}
+.hm-input:focus{border-color:var(--green);}
+.hm-sum{font-weight:700;font-size:12px;}
+.hm-col-sum{font-weight:700;font-size:12px;text-align:right!important;padding-right:10px!important;}
+
+/* ─── MATRIX ─── */
+.matrix-table th{font-size:11px;white-space:nowrap;}
+.matrix-table td{text-align:center!important;}
+select.level-select{
+  padding:4px 6px;border-radius:6px;border:1.5px solid var(--gray-300);
+  font-size:11px;font-family:inherit;background:#fff;cursor:pointer;outline:none;
+}
+select.level-select.elite{background:#fef9e7;border-color:#f0c040;color:#7a5c00;}
+select.level-select.preferred{background:var(--green-light);border-color:var(--green);color:var(--green-dark);}
+select.level-select.registered{background:var(--blue-light);border-color:#5ba3c9;color:#1a5f80;}
+select.level-select.none{background:var(--gray-100);color:var(--gray-500);}
+
+/* ─── PCS ─── */
+.pcs-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.pcs-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--gray-200);}
+.pcs-label{flex:1;font-size:13px;font-weight:500;}
+.pcs-weight{font-size:12px;color:var(--gray-500);width:38px;text-align:right;}
+input.pcs-score{width:56px;border:1.5px solid var(--gray-300);border-radius:6px;padding:5px 8px;text-align:center;font-size:14px;font-weight:700;outline:none;font-family:inherit;}
+input.pcs-score:focus{border-color:var(--green);}
+.pcs-bar{flex:1;height:8px;background:var(--gray-200);border-radius:99px;overflow:hidden;}
+.pcs-bar-fill{height:100%;background:var(--green);border-radius:99px;transition:width .3s;}
+.pcs-total{font-size:28px;font-weight:700;color:var(--navy);}
+.pcs-grade{font-size:14px;font-weight:700;padding:4px 16px;border-radius:99px;margin-left:12px;}
+
+/* ─── POSITION MAP ─── */
+.pos-map{position:relative;width:100%;height:380px;border:1.5px solid var(--gray-300);border-radius:var(--radius);background:linear-gradient(135deg,#f0f4ff 0%,#e8f5cc 100%);}
+.pos-axis-x{position:absolute;bottom:10px;left:0;right:0;text-align:center;font-size:11px;color:var(--gray-500);}
+.pos-axis-y{position:absolute;left:8px;top:0;bottom:0;display:flex;align-items:center;writing-mode:vertical-rl;transform:rotate(180deg);font-size:11px;color:var(--gray-500);}
+.pos-quadrant{position:absolute;font-size:10px;font-weight:700;opacity:.5;padding:6px;}
+.pos-dot{position:absolute;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;cursor:default;transform:translate(-50%,-50%);transition:all .5s;border:2px solid rgba(255,255,255,.8);box-shadow:0 2px 8px rgba(0,0,0,.2);}
+.pos-dot-label{position:absolute;font-size:9px;white-space:nowrap;top:100%;left:50%;transform:translateX(-50%);margin-top:2px;font-weight:600;color:var(--gray-900);}
+.pos-divider-v{position:absolute;top:0;bottom:0;left:50%;border-left:1.5px dashed var(--gray-300);}
+.pos-divider-h{position:absolute;left:0;right:0;top:50%;border-top:1.5px dashed var(--gray-300);}
+
+/* ─── SWOT ─── */
+.swot-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--gray-300);border-radius:var(--radius);overflow:hidden;}
+.swot-cell{background:#fff;padding:16px;}
+.swot-cell.s{border-top:3px solid #27ae60;}
+.swot-cell.w{border-top:3px solid #e74c3c;}
+.swot-cell.o{border-top:3px solid #2980b9;}
+.swot-cell.t{border-top:3px solid #f39c12;}
+.swot-title{font-size:12px;font-weight:700;margin-bottom:8px;}
+.swot-cell.s .swot-title{color:#27ae60;}
+.swot-cell.w .swot-title{color:#e74c3c;}
+.swot-cell.o .swot-title{color:#2980b9;}
+.swot-cell.t .swot-title{color:#f39c12;}
+textarea.swot-input{width:100%;min-height:80px;border:1px solid var(--gray-200);border-radius:6px;padding:8px;font-size:12px;font-family:inherit;resize:vertical;color:var(--gray-700);outline:none;}
+textarea.swot-input:focus{border-color:var(--green);}
+
+/* ─── PARTNER CARD ─── */
+.partner-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;}
+.partner-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s;}
+.partner-card:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,.12);}
+.pc-header{background:var(--navy);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;}
+.pc-name{color:#fff;font-weight:700;font-size:15px;}
+.pc-type{font-size:11px;padding:2px 8px;border-radius:99px;font-weight:600;}
+.pc-body{padding:16px 18px;}
+.pc-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--gray-200);}
+.pc-row:last-child{border-bottom:none;}
+.pc-key{font-size:12px;color:var(--gray-500);}
+.pc-val{font-size:12px;font-weight:600;color:var(--gray-900);}
+input.pc-input{border:1.5px solid var(--gray-300);border-radius:6px;padding:3px 8px;font-size:12px;font-family:inherit;outline:none;text-align:right;width:110px;}
+input.pc-input:focus{border-color:var(--green);}
+
+/* ─── FRAMEWORK ─── */
+.fw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;}
+.fw-item{background:var(--gray-100);border-radius:8px;padding:14px 16px;border-left:3px solid var(--green);}
+.fw-title{font-size:13px;font-weight:700;color:var(--gray-900);margin-bottom:6px;}
+.fw-desc{font-size:12px;color:var(--gray-500);line-height:1.6;}
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:900px){
+  #sidebar{width:60px;min-width:60px;}
+  .sidebar-logo .sub,.nav-section,.nav-item span{display:none;}
+  #main{margin-left:60px;}
+  .nav-item{justify-content:center;padding:12px;}
+}
+
+/* ─── TOOLTIP ─── */
+.tooltip{position:fixed;background:var(--navy);color:#fff;font-size:11px;padding:5px 10px;border-radius:6px;pointer-events:none;z-index:999;opacity:0;transition:opacity .15s;}
+
+/* ─── SAVE BANNER ─── */
+.save-banner{position:fixed;bottom:24px;right:24px;background:var(--green);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 16px rgba(118,185,0,.4);opacity:0;transition:opacity .3s;pointer-events:none;}
+</style>
+</head>
+<body>
+
+<!-- ─── SIDEBAR ─── -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <div class="brand">NVIDIA NPN</div>
+    <div class="sub">파트너 관리 기획서 v2.0</div>
+  </div>
+
+  <div class="nav-section">PART 1. 포트폴리오</div>
+  <div class="nav-item active" data-sec="s11" onclick="nav(this)"><span class="icon">📊</span><span>1.1 파트너 현황</span></div>
+  <div class="nav-item" data-sec="s12" onclick="nav(this)"><span class="icon">🗂️</span><span>1.2 Competency 매트릭스</span></div>
+  <div class="nav-item" data-sec="s13" onclick="nav(this)"><span class="icon">📈</span><span>1.3 매출 분석</span></div>
+  <div class="nav-item" data-sec="s14" onclick="nav(this)"><span class="icon">🗺️</span><span>1.4 포지셔닝 맵</span></div>
+
+  <div class="nav-section">PART 2. 프레임워크</div>
+  <div class="nav-item" data-sec="s21" onclick="nav(this)"><span class="icon">🔖</span><span>2.1 분류 기준</span></div>
+  <div class="nav-item" data-sec="s22" onclick="nav(this)"><span class="icon">📐</span><span>2.2 KPI 정의</span></div>
+  <div class="nav-item" data-sec="s23" onclick="nav(this)"><span class="icon">⭐</span><span>2.3 PCS 평가 모델</span></div>
+
+  <div class="nav-section">PART 3. 파트너 프로파일</div>
+  <div class="nav-item" data-sec="s31" onclick="nav(this)"><span class="icon">👥</span><span>파트너 목록</span></div>
+  <div class="nav-item" data-sec="s32" onclick="nav(this)"><span class="icon">📋</span><span>상세 프로파일</span></div>
+</nav>
+
+<!-- ─── MAIN ─── -->
+<div id="main">
+  <div id="topbar">
+    <div class="topbar-title">NVIDIA NPN 파트너 관리 기획서</div>
+    <div class="topbar-meta">
+      <span class="badge badge-green">v2.0</span>&nbsp;
+      <span class="badge badge-navy">한국 전체</span>&nbsp;
+      <span style="font-size:12px;color:var(--gray-500);">기준일: 2026-05-09</span>
+    </div>
+  </div>
+
+  <div id="content">
+
+    <!-- ══════════════════ 1.1 파트너 현황 ══════════════════ -->
+    <div id="s11" class="section active">
+      <div>
+        <div class="section-title">1.1 파트너 현황 스냅샷</div>
+        <div class="section-desc">파트너 수와 Level 분포를 입력하세요. 합계가 자동으로 계산됩니다.</div>
+      </div>
+
+      <!-- 통계 카드 -->
+      <div class="stat-grid" id="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">총 파트너 수</div>
+          <div class="stat-value" id="total-partners">0</div>
+          <div class="stat-sub">SP + SA + Distributor</div>
+        </div>
+        <div class="stat-card" style="border-top-color:#f0c040;">
+          <div class="stat-label">Elite 파트너</div>
+          <div class="stat-value" id="total-elite">0</div>
+          <div class="stat-sub">전체 대비 <span id="elite-pct">0%</span></div>
+        </div>
+        <div class="stat-card" style="border-top-color:#5ba3c9;">
+          <div class="stat-label">FY26 총매출</div>
+          <div><input class="stat-input" id="total-rev" type="number" placeholder="0" oninput="updateStats()"/> <span style="font-size:14px;color:var(--gray-500);">$M</span></div>
+          <div class="stat-sub">Net Revenue (USD M)</div>
+        </div>
+        <div class="stat-card" style="border-top-color:#9b59b6;">
+          <div class="stat-label">YoY 성장률</div>
+          <div><input class="stat-input" id="yoy-rate" type="number" placeholder="0" style="width:70px;" oninput="updateStats()"/> <span style="font-size:14px;color:var(--gray-500);">%</span></div>
+          <div class="stat-sub">FY25 → FY26</div>
+        </div>
+      </div>
+
+      <!-- 파트너 분포 입력 테이블 -->
+      <div class="card">
+        <div class="card-title"><span class="num">1.1</span> Type × Level 분포 입력</div>
+        <div class="tbl-wrap">
+          <table id="dist-table">
+            <thead><tr>
+              <th>Level \ Type</th>
+              <th>SP (Solution Provider)</th>
+              <th>SA (Solution Advisor)</th>
+              <th>Distributor</th>
+              <th style="background:var(--green);">소계</th>
+            </tr></thead>
+            <tbody id="dist-body"></tbody>
+            <tfoot><tr class="tfoot-row" id="dist-foot"></tr></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- 변동 사항 -->
+      <div class="card">
+        <div class="card-title"><span class="num">1.1</span> FY26 주요 변동 사항</div>
+        <div class="tbl-wrap">
+          <table id="change-table">
+            <thead><tr><th>구분</th><th>파트너명</th><th>내용</th><th>시점</th></tr></thead>
+            <tbody id="change-body"></tbody>
+          </table>
+        </div>
+        <button onclick="addChangeRow()" style="margin-top:12px;padding:7px 16px;background:var(--green);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;">+ 행 추가</button>
+      </div>
+    </div>
+
+    <!-- ══════════════════ 1.2 Competency 매트릭스 ══════════════════ -->
+    <div id="s12" class="section">
+      <div>
+        <div class="section-title">1.2 Competency × Level 전체 매트릭스</div>
+        <div class="section-desc">각 파트너의 Competency별 Level을 선택하세요.</div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="num">1.2</span> 매트릭스
+          <span style="margin-left:auto;font-size:11px;color:var(--gray-500);">
+            <span style="background:#fef9e7;padding:2px 6px;border-radius:4px;border:1px solid #f0c040;">★★★ Elite</span>&nbsp;
+            <span style="background:var(--green-light);padding:2px 6px;border-radius:4px;border:1px solid var(--green);">★★ Preferred</span>&nbsp;
+            <span style="background:var(--blue-light);padding:2px 6px;border-radius:4px;">★ Registered</span>&nbsp;
+            <span style="background:var(--gray-100);padding:2px 6px;border-radius:4px;">— 미보유</span>
+          </span>
+        </div>
+        <div class="tbl-wrap">
+          <table id="matrix-table" class="matrix-table"></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════ 1.3 매출 분석 ══════════════════ -->
+    <div id="s13" class="section">
+      <div>
+        <div class="section-title">1.3 FY별 Competency 매출 추이 분석</div>
+        <div class="section-desc">FY24 ~ FY26 Revenue(USD)를 입력하면 CAGR과 FY Mix%가 자동으로 계산됩니다.</div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="num">1.3</span> Competency별 매출 테이블</div>
+        <div class="tbl-wrap">
+          <table id="rev-table">
+            <thead><tr>
+              <th>Competency</th>
+              <th>FY24 Revenue</th>
+              <th>FY25 Revenue</th>
+              <th>FY26 Revenue</th>
+              <th style="background:var(--green);">CAGR (FY24→26)</th>
+              <th>FY24 Mix%</th>
+              <th>FY25 Mix%</th>
+              <th style="background:#b8860b;">FY26 Mix%</th>
+            </tr></thead>
+            <tbody id="rev-body"></tbody>
+            <tfoot><tr id="rev-foot" class="tfoot-row"></tr></tfoot>
+          </table>
+        </div>
+        <p style="font-size:11px;color:var(--gray-500);margin-top:10px;">💡 Revenue 단위: USD (천 달러). 예) 5,000 = $5,000K = $5M</p>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="num">1.3</span> FY별 Competency Mix 차트</div>
+        <canvas id="mix-chart" height="90"></canvas>
+      </div>
+    </div>
+
+    <!-- ══════════════════ 1.4 포지셔닝 맵 ══════════════════ -->
+    <div id="s14" class="section">
+      <div>
+        <div class="section-title">1.4 경쟁력 포지셔닝 맵</div>
+        <div class="section-desc">PCS 평가(Part 2.3)에서 입력한 점수를 기반으로 자동 배치됩니다. 파트너를 직접 드래그할 수도 있습니다.</div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="num">1.4</span> 포지셔닝 맵
+          <span style="margin-left:auto;font-size:11px;color:var(--gray-500);">X: Competency Coverage (C1) · Y: Revenue Performance (C2)</span>
+        </div>
+        <div class="pos-map" id="pos-map">
+          <div class="pos-divider-v"></div>
+          <div class="pos-divider-h"></div>
+          <div class="pos-quadrant" style="top:8px;left:8px;color:#888;">Specialist</div>
+          <div class="pos-quadrant" style="top:8px;right:8px;color:var(--green-dark);">⭐ Star</div>
+          <div class="pos-quadrant" style="bottom:8px;left:8px;color:#888;">Emerging</div>
+          <div class="pos-quadrant" style="bottom:8px;right:8px;color:#c0392b;">Wide-Underperform</div>
+          <div class="pos-axis-x">← Competency Coverage (C1) →</div>
+          <div class="pos-axis-y">Revenue Performance (C2)</div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
+          <span style="font-size:11px;"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#27ae60;margin-right:4px;"></span>SP</span>
+          <span style="font-size:11px;"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#2980b9;margin-right:4px;"></span>SA</span>
+          <span style="font-size:11px;"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#8e44ad;margin-right:4px;"></span>Distributor</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════ 2.1 분류 기준 ══════════════════ -->
+    <div id="s21" class="section">
+      <div><div class="section-title">2.1 파트너 분류 기준</div></div>
+      <div class="card">
+        <div class="card-title"><span class="num">Type</span> 파트너 유형 정의</div>
+        <div class="fw-grid">
+          <div class="fw-item"><div class="fw-title">🏢 SP — Solution Provider</div><div class="fw-desc">NVIDIA 솔루션을 직접 판매·구축. 영업, 기술 컨설팅, 구축, 사후지원 담당. Transacting 파트너.</div></div>
+          <div class="fw-item" style="border-left-color:#2980b9;"><div class="fw-title">💡 SA — Solution Advisor</div><div class="fw-desc">컨설팅·자문 중심 파트너. 솔루션 추천, 아키텍처 설계. Non-transacting, SP 경유 Resell.</div></div>
+          <div class="fw-item" style="border-left-color:#8e44ad;"><div class="fw-title">🏭 Distributor</div><div class="fw-desc">총판. SP/SA에 제품 공급 및 채널 관리. 물류, 라이선스 공급, 채널 인에이블먼트.</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="num">Comp</span> Competency 8개 정의</div>
+        <div class="fw-grid" id="comp-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="num">Level</span> Level 인정 기준 및 혜택</div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Level</th><th>인정 조건</th><th>주요 혜택</th></tr></thead>
+            <tbody>
+              <tr><td><span class="badge" style="background:#fef9e7;color:#7a5c00;border:1px solid #f0c040;">★★★ Elite</span></td><td>인증 엔지니어 N명 이상 + 매출 상위 X% + Competency N개 이상</td><td>MDF 최우선, Co-sell 우선권, Exec Access, NFR 장비 지원</td></tr>
+              <tr><td><span class="badge badge-green">★★ Preferred</span></td><td>인증 엔지니어 N명 이상 + 핵심 Competency 보유 + 매출 기준 충족</td><td>MDF 지원, 기술 트레이닝 우선 배정, Demo 장비 지원</td></tr>
+              <tr><td><span class="badge badge-blue">★ Registered</span></td><td>NPN 기본 등록 + Competency 1개 이상 취득</td><td>카탈로그 접근, 기본 트레이닝, 파트너 포털 이용</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════ 2.2 KPI 정의 ══════════════════ -->
+    <div id="s22" class="section">
+      <div><div class="section-title">2.2 매출 분석 KPI 정의</div></div>
+      <div class="card">
+        <div class="card-title"><span class="num">KPI</span> 지표 정의</div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>KPI</th><th>정의 및 산식</th><th>활용 목적</th></tr></thead>
+            <tbody id="kpi-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════ 2.3 PCS 평가 모델 ══════════════════ -->
+    <div id="s23" class="section">
+      <div>
+        <div class="section-title">2.3 경쟁력 평가 모델 (PCS)</div>
+        <div class="section-desc">파트너를 선택하고 5개 축 점수를 입력하면 PCS가 자동으로 계산됩니다.</div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="num">PCS</span> 파트너 선택
+          <select id="pcs-partner-select" onchange="loadPCS()" style="margin-left:12px;padding:5px 10px;border-radius:6px;border:1.5px solid var(--gray-300);font-family:inherit;font-size:13px;"></select>
+        </div>
+        <div class="pcs-grid">
+          <div>
+            <div id="pcs-rows"></div>
+            <div style="margin-top:16px;padding:16px;background:var(--gray-100);border-radius:8px;display:flex;align-items:center;">
+              <div>
+                <div style="font-size:12px;color:var(--gray-500);margin-bottom:4px;">PCS 합계</div>
+                <div style="display:flex;align-items:center;">
+                  <div class="pcs-total" id="pcs-total">0.00</div>
+                  <div class="pcs-grade" id="pcs-grade" style="background:var(--gray-200);color:var(--gray-500);">-</div>
+                </div>
+              </div>
+              <div style="margin-left:auto;text-align:right;">
+                <div style="font-size:11px;color:var(--gray-500);">S ≥ 4.0 / A ≥ 3.0 / B ≥ 2.0 / C < 2.0</div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <canvas id="pcs-radar" height="220"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════ 3.1 파트너 목록 ══════════════════ -->
+    <div id="s31" class="section">
+      <div><div class="section-title">파트너 목록</div></div>
+      <div class="partner-list" id="partner-list"></div>
+    </div>
+
+    <!-- ══════════════════ 3.2 상세 프로파일 ══════════════════ -->
+    <div id="s32" class="section">
+      <div>
+        <div class="section-title">파트너 상세 프로파일</div>
+        <div class="section-desc">
+          파트너 선택:
+          <select id="profile-select" onchange="loadProfile()" style="margin-left:8px;padding:5px 10px;border-radius:6px;border:1.5px solid var(--gray-300);font-family:inherit;font-size:13px;"></select>
+        </div>
+      </div>
+      <div id="profile-content"></div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<div class="tooltip" id="tooltip"></div>
+<div class="save-banner" id="save-banner">💾 자동 저장됨</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════
+// 데이터 모델
+// ══════════════════════════════════════════════════════════════════════
+const COMPS = [
+  {code:"AI-COMP", name:"AI Computing",       desc:"DGX, HGX, BasePOD. 생성형 AI/LLM 학습·추론 인프라"},
+  {code:"AI-ENT",  name:"AI Enterprise SW",   desc:"NVAIE, NIM, NeMo, Morpheus"},
+  {code:"DC-COMP", name:"Data Center Comp",   desc:"일반 GPU 컴퓨팅, HPC 클러스터"},
+  {code:"NETWORK", name:"Networking",         desc:"Spectrum-X, Quantum IB, BlueField DPU"},
+  {code:"VIZ",     name:"Visualization",      desc:"RTX Pro, Omniverse, 디지털트윈"},
+  {code:"VIRT",    name:"Virtual GPU",        desc:"vGPU, VDI, NVAIE 가상화"},
+  {code:"EDGE",    name:"Edge Computing",     desc:"Jetson, IGX Orin, Industrial AI"},
+  {code:"AUTO",    name:"Automotive",         desc:"DRIVE Orin, DRIVE Thor"},
+];
+
+const LEVELS   = ["Elite","Preferred","Registered","—"];
+const FY_YEARS = ["FY24","FY25","FY26"];
+
+const PARTNERS = [
+  {id:"p1",name:"Partner A",type:"SP"},
+  {id:"p2",name:"Partner B",type:"SP"},
+  {id:"p3",name:"Partner C",type:"SP"},
+  {id:"p4",name:"Partner D",type:"SP"},
+  {id:"p5",name:"Partner E",type:"SA"},
+  {id:"p6",name:"Partner F",type:"SA"},
+  {id:"p7",name:"Partner G",type:"Distributor"},
+  {id:"p8",name:"Partner H",type:"Distributor"},
+];
+
+const TYPE_COLOR = {SP:"#27ae60", SA:"#2980b9", Distributor:"#8e44ad"};
+const TYPE_BADGE_STYLE = {
+  SP:          "background:#d5e8d4;color:#27ae60;",
+  SA:          "background:#dae8fc;color:#2980b9;",
+  Distributor: "background:#ffe6cc;color:#8e44ad;"
+};
+
+// 앱 상태
+const state = {
+  dist:      {Elite:{SP:0,SA:0,Dist:0}, Preferred:{SP:0,SA:0,Dist:0}, Registered:{SP:0,SA:0,Dist:0}},
+  matrix:    {},   // {pid_comp: level}
+  revenue:   {},   // {comp_fy: value}
+  pcs:       {},   // {pid: {c1,c2,c3,c4,c5}}
+  profiles:  {},   // {pid: {pam,founded,employees,industries,...}}
+  swot:      {},   // {pid: {s,w,o,t}}
+  changes:   [],
+  totalRev:  "",
+  yoy:       "",
+};
+
+// ══════════════════════════════════════════════════════════════════════
+// 네비게이션
+// ══════════════════════════════════════════════════════════════════════
+function nav(el) {
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  el.classList.add('active');
+  const sec = document.getElementById(el.dataset.sec);
+  if(sec) sec.classList.add('active');
+  if(el.dataset.sec==='s14') renderPositionMap();
+  if(el.dataset.sec==='s23') renderPCSRadar();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// 1.1 파트너 현황
+// ══════════════════════════════════════════════════════════════════════
+function buildDistTable() {
+  const body = document.getElementById('dist-body');
+  const foot = document.getElementById('dist-foot');
+  const levels = ['Elite','Preferred','Registered'];
+  const types  = ['SP','SA','Dist'];
+  const typeLabels = ['SP','SA','Distributor'];
+
+  body.innerHTML = '';
+  levels.forEach(lv => {
+    const tr = document.createElement('tr');
+    let html = `<td><span class="badge ${lv==='Elite'?'badge-yellow':lv==='Preferred'?'badge-green':'badge-blue'}">${lv}</span></td>`;
+    types.forEach(tp => {
+      html += `<td><input class="num-input" style="width:70px;" type="number" min="0" placeholder="0"
+        data-lv="${lv}" data-tp="${tp}"
+        onchange="state.dist['${lv}']['${tp}']=+this.value||0;updateStats();"
+        value="${state.dist[lv][tp]||''}"/></td>`;
+    });
+    html += `<td id="sub-${lv}" class="calc-cell" style="font-weight:700;">0</td>`;
+    tr.innerHTML = html;
+    body.appendChild(tr);
+  });
+
+  // 합계 행
+  foot.innerHTML = `<td>합계</td>`;
+  types.forEach((tp,i) => {
+    foot.innerHTML += `<td id="col-${tp}" style="text-align:center;">0</td>`;
+  });
+  foot.innerHTML += `<td id="grand-total" style="background:var(--green);">0</td>`;
+}
+
+function updateStats() {
+  const levels = ['Elite','Preferred','Registered'];
+  const types  = ['SP','SA','Dist'];
+  let grand = 0, eliteSum = 0;
+
+  levels.forEach(lv => {
+    let rowSum = 0;
+    types.forEach(tp => { rowSum += (state.dist[lv][tp]||0); });
+    const el = document.getElementById(`sub-${lv}`);
+    if(el) el.textContent = rowSum;
+    if(lv==='Elite') eliteSum = rowSum;
+    grand += rowSum;
+  });
+
+  types.forEach(tp => {
+    let colSum = 0;
+    levels.forEach(lv => { colSum += (state.dist[lv][tp]||0); });
+    const el = document.getElementById(`col-${tp}`);
+    if(el) el.textContent = colSum;
+  });
+
+  const gt = document.getElementById('grand-total');
+  if(gt) gt.textContent = grand;
+  document.getElementById('total-partners').textContent = grand;
+  document.getElementById('total-elite').textContent    = eliteSum;
+  document.getElementById('elite-pct').textContent      = grand>0 ? Math.round(eliteSum/grand*100)+'%' : '0%';
+}
+
+function addChangeRow() {
+  const opts = ['신규 진입','Tier-up','Tier-down','이탈'];
+  const body = document.getElementById('change-body');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><select style="padding:4px;border-radius:4px;border:1px solid var(--gray-300);font-family:inherit;font-size:12px;">
+      ${opts.map(o=>`<option>${o}</option>`).join('')}</select></td>
+    <td><input type="text" style="width:120px;padding:4px 6px;border:1px solid var(--gray-300);border-radius:4px;font-size:12px;" placeholder="파트너명"/></td>
+    <td><input type="text" style="width:180px;padding:4px 6px;border:1px solid var(--gray-300);border-radius:4px;font-size:12px;" placeholder="내용 입력"/></td>
+    <td><input type="text" style="width:90px;padding:4px 6px;border:1px solid var(--gray-300);border-radius:4px;font-size:12px;" placeholder="FY26 Q1"/></td>
+  `;
+  body.appendChild(tr);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// 1.2 Competency 매트릭스
+// ══════════════════════════════════════════════════════════════════════
+function buildMatrix() {
+  const tbl = document.getElementById('matrix-table');
+  let html = '<thead><tr><th>파트너</th><th>Type</th>';
+  COMPS.forEach(c => { html += `<th>${c.code}</th>`; });
+  html += '<th style="background:var(--green);">Elite 수</th></tr></thead><tbody>';
+
+  PARTNERS.forEach(p => {
+    html += `<tr><td style="font-weight:600;">${p.name}</td>
+      <td><span class="badge" style="${TYPE_BADGE_STYLE[p.type]}">${p.type}</span></td>`;
+    COMPS.forEach(c => {
+      const key = `${p.id}_${c.code}`;
+      const cur  = state.matrix[key] || '—';
+      const cls  = cur==='Elite'?'elite':cur==='Preferred'?'preferred':cur==='Registered'?'registered':'none';
+      html += `<td>
+        <select class="level-select ${cls}" data-key="${key}" onchange="onLevelChange(this)">
+          ${LEVELS.map(l=>`<option${l===cur?' selected':''}>${l}</option>`).join('')}
+        </select></td>`;
+    });
+    html += `<td id="elite-cnt-${p.id}" class="calc-cell">0</td></tr>`;
+  });
+
+  // 보유 파트너 수 행
+  html += '<tr style="background:var(--navy);"><td colspan="2" style="color:#fff;font-weight:700;text-align:center;padding:8px;">보유 파트너 수</td>';
+  COMPS.forEach(c => {
+    html += `<td id="comp-cnt-${c.code}" style="color:#fff;font-weight:700;text-align:center;">0</td>`;
+  });
+  html += '<td style="color:#fff;"></td></tr>';
+  html += '</tbody>';
+  tbl.innerHTML = html;
+  recalcMatrix();
+}
+
+function onLevelChange(sel) {
+  const key = sel.dataset.key;
+  state.matrix[key] = sel.value;
+  sel.className = `level-select ${sel.value==='Elite'?'elite':sel.value==='Preferred'?'preferred':sel.value==='Registered'?'registered':'none'}`;
+  recalcMatrix();
+}
+
+function recalcMatrix() {
+  PARTNERS.forEach(p => {
+    let eliteCnt = 0;
+    COMPS.forEach(c => {
+      if(state.matrix[`${p.id}_${c.code}`]==='Elite') eliteCnt++;
+    });
+    const el = document.getElementById(`elite-cnt-${p.id}`);
+    if(el) el.textContent = eliteCnt;
+  });
+  COMPS.forEach(c => {
+    let cnt = 0;
+    PARTNERS.forEach(p => {
+      const v = state.matrix[`${p.id}_${c.code}`];
+      if(v && v !== '—') cnt++;
+    });
+    const el = document.getElementById(`comp-cnt-${c.code}`);
+    if(el) el.textContent = cnt;
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// 1.3 매출 분석
+// ══════════════════════════════════════════════════════════════════════
+let mixChart = null;
+function buildRevTable() {
+  const body = document.getElementById('rev-body');
+  const foot = document.getElementById('rev-foot');
+  body.innerHTML = '';
+
+  COMPS.forEach((c,i) => {
+    const tr = document.createElement('tr');
+    let html = `<td><strong>${c.code}</strong></td>`;
+    FY_YEARS.forEach(fy => {
+      const key = `${c.code}_${fy}`;
+      html += `<td><input class="num-input" type="number" min="0" placeholder="—"
+        data-comp="${c.code}" data-fy="${fy}"
+        onchange="state.revenue['${key}']=+this.value||0;recalcRev();"
+        value="${state.revenue[key]||''}"/></td>`;
+    });
+    html += `<td><span class="calc-cell" id="cagr-${c.code}">—</span></td>`;
+    FY_YEARS.forEach(fy => {
+      html += `<td><span class="calc-cell" id="mix-${c.code}-${fy}" style="background:var(--gray-100);color:var(--gray-700);">—</span></td>`;
+    });
+    tr.innerHTML = html;
+    body.appendChild(tr);
+  });
+
+  // 합계 행
+  let fhtml = '<td>합계</td>';
+  FY_YEARS.forEach(fy => {
+    fhtml += `<td id="tot-${fy}" style="text-align:right;padding-right:12px;">—</td>`;
+  });
+  fhtml += '<td id="tot-cagr" style="background:var(--green);">—</td>';
+  FY_YEARS.forEach(fy => { fhtml += `<td id="tot-mix-${fy}">100%</td>`; });
+  foot.innerHTML = fhtml;
+}
+
+function recalcRev() {
+  const totals = {};
+  FY_YEARS.forEach(fy => {
+    totals[fy] = COMPS.reduce((s,c) => s+(state.revenue[`${c.code}_${fy}`]||0),0);
+  });
+
+  COMPS.forEach(c => {
+    const v24 = state.revenue[`${c.code}_FY24`]||0;
+    const v26 = state.revenue[`${c.code}_FY26`]||0;
+
+    // CAGR
+    const cagrEl = document.getElementById(`cagr-${c.code}`);
+    if(v24>0 && v26>0) {
+      const cagr = (Math.pow(v26/v24, 1/2)-1)*100;
+      cagrEl.textContent = cagr.toFixed(1)+'%';
+      cagrEl.className = `calc-cell${cagr<0?' neg':''}`;
+    } else {
+      cagrEl.textContent='—'; cagrEl.className='calc-cell';
+    }
+
+    // Mix%
+    FY_YEARS.forEach(fy => {
+      const val = state.revenue[`${c.code}_${fy}`]||0;
+      const mixEl = document.getElementById(`mix-${c.code}-${fy}`);
+      if(totals[fy]>0 && val>0) {
+        const pct = (val/totals[fy]*100).toFixed(1)+'%';
+        const intensity = Math.round((val/totals[fy])*255);
+        mixEl.textContent = pct;
+        mixEl.style.background = `rgba(118,185,0,${val/totals[fy]})`;
+        mixEl.style.color = (val/totals[fy])>0.5?'#fff':'var(--gray-900)';
+      } else {
+        mixEl.textContent='—';
+        mixEl.style.background='var(--gray-100)';
+        mixEl.style.color='var(--gray-700)';
+      }
+    });
+  });
+
+  // 합계 행
+  FY_YEARS.forEach(fy => {
+    const el = document.getElementById(`tot-${fy}`);
+    if(el) el.textContent = totals[fy] ? totals[fy].toLocaleString() : '—';
+  });
+  const tot24=totals['FY24']||0, tot26=totals['FY26']||0;
+  const totCagrEl = document.getElementById('tot-cagr');
+  if(tot24>0 && tot26>0) {
+    const tc = (Math.pow(tot26/tot24,1/2)-1)*100;
+    totCagrEl.textContent = tc.toFixed(1)+'%';
+  } else {
+    totCagrEl.textContent = '—';
+  }
+
+  updateMixChart(totals);
+}
+
+function updateMixChart(totals) {
+  const ctx = document.getElementById('mix-chart');
+  const colors = ['#76B900','#1A6FA0','#e67e22','#8e44ad','#e74c3c','#27ae60','#2980b9','#f39c12'];
+
+  const datasets = COMPS.map((c,i) => ({
+    label: c.code,
+    data: FY_YEARS.map(fy => state.revenue[`${c.code}_${fy}`]||0),
+    backgroundColor: colors[i]+'cc',
+    borderColor: colors[i],
+    borderWidth:1
+  }));
+
+  if(mixChart) { mixChart.destroy(); }
+  mixChart = new Chart(ctx, {
+    type:'bar',
+    data:{labels:FY_YEARS, datasets},
+    options:{
+      responsive:true, plugins:{legend:{position:'right'}},
+      scales:{x:{stacked:true},y:{stacked:true, ticks:{callback:v=>v.toLocaleString()}}}
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// 1.4 포지셔닝 맵
+// ══════════════════════════════════════════════════════════════════════
+function renderPositionMap() {
+  const map = document.getElementById('pos-map');
+  // 기존 dot 제거
+  map.querySelectorAll('.pos-dot').forEach(d=>d.remove());
+  const mapW = map.clientWidth, mapH = map.clientHeight;
+
+  PARTNERS.forEach((p,i) => {
+    const pcs = state.pcs[p.id] || {};
+    const c1  = pcs.c1||0, c2 = pcs.c2||0;
+    // X: c1/5 * 90% + 5%  Y: (1-c2/5)*90%+5%
+    const xPct = c1>0 ? (c1/5*80+10) : (20+i*8)%90;
+    const yPct = c2>0 ? (100 - (c2/5*80+10)) : (20+i*10)%90;
+
+    const dot = document.createElement('div');
+    dot.className = 'pos-dot';
+    dot.style.left   = xPct+'%';
+    dot.style.top    = yPct+'%';
+    dot.style.background = TYPE_COLOR[p.type];
+    dot.title = `${p.name} | C1:${c1} C2:${c2}`;
+    dot.innerHTML = `<span style="color:#fff;font-size:9px;font-weight:700;">${p.name.replace('Partner ','')}</span>
+      <div class="pos-dot-label" style="color:var(--gray-900);">${p.name}</div>`;
+    map.appendChild(dot);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// 2.2 KPI 테이블
+// ══════════════════════════════════════════════════════════════════════
+function buildKPI() {
+  const kpis = [
+    {k:"FY Revenue",     d:"Fiscal Year 기준 Net Revenue (USD)",                       p:"절대 규모 파악"},
+    {k:"Deal Count",     d:"FY 내 클로즈된 Deal 수",                                    p:"영업 활동량 측정"},
+    {k:"YoY Growth",     d:"(FY(N) − FY(N-1)) / FY(N-1) × 100",                       p:"단기 성장성"},
+    {k:"CAGR",           d:"(FY마지막 / FY첫해)^(1/기간) − 1",                          p:"중장기 성장 추세"},
+    {k:"Avg Deal Size",  d:"FY Revenue / Deal Count",                                   p:"거래 대형화 추세"},
+    {k:"Comp. Mix",      d:"특정 Comp 매출 / 파트너 전체 매출",                          p:"역량 편중 여부"},
+    {k:"HHI",            d:"Σ(각 Comp 매출 비중²) — 1에 가까울수록 편중",              p:"포트폴리오 다각화 수준"},
+    {k:"Level-Rev Align",d:"Level 분위 vs 매출 분위 차이",                              p:"Level 등급 적정성 검증"},
+  ];
+  const body = document.getElementById('kpi-body');
+  body.innerHTML = kpis.map(k=>`<tr>
+    <td><strong>${k.k}</strong></td><td style="font-family:monospace;font-size:12px;">${k.d}</td>
+    <td>${k.p}</td></tr>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// 2.3 PCS
+// ══════════════════════════════════════════════════════════════════════
+const PCS_AXES = [
+  {key:'c1', label:'C1. Competency Coverage', weight:.20},
+  {key:'c2', label:'C2. Revenue Performance',  weight:.30},
+  {key:'c3', label:'C3. Technical Capability', weight:.20},
+  {key:'c4', label:'C4. Market Reach',         weight:.15},
+  {key:'c5', label:'C5. Strategic Alignment',  weight:.15},
+];
+let pcsRadarChart = null;
+
+function buildPCSSelect() {
+  const sel = document.getElementById('pcs-partner-select');
+  sel.innerHTML = PARTNERS.map(p=>`<option value="${p.id}">${p.name} (${p.type})</option>`).join('');
+}
+
+function loadPCS() {
+  const pid = document.getElementById('pcs-partner-select').value;
+  const data = state.pcs[pid] || {};
+  const container = document.getElementById('pcs-rows');
+  container.innerHTML = '';
+
+  PCS_AXES.forEach(ax => {
+    const val = data[ax.key]||0;
+    const row = document.createElement('div');
+    row.className = 'pcs-row';
+    row.innerHTML = `
+      <div class="pcs-label">${ax.label}</div>
+      <div class="pcs-weight">${(ax.weight*100).toFixed(0)}%</div>
+      <input class="pcs-score" type="number" min="1" max="5" step="0.1" value="${val||''}" placeholder="—"
+        data-pid="${pid}" data-key="${ax.key}"
+        oninput="onPCSInput(this)"/>
+      <div class="pcs-bar"><div class="pcs-bar-fill" id="bar-${ax.key}" style="width:${val/5*100}%"></div></div>
+    `;
+    container.appendChild(row);
+  });
+  calcPCS(pid);
+}
+
+function onPCSInput(inp) {
+  const pid = inp.dataset.pid, key = inp.dataset.key;
+  if(!state.pcs[pid]) state.pcs[pid]={};
+  const v = Math.min(5, Math.max(0, +inp.value||0));
+  state.pcs[pid][key] = v;
+  const bar = document.getElementById(`bar-${key}`);
+  if(bar) bar.style.width = (v/5*100)+'%';
+  calcPCS(pid);
+  renderPCSRadar();
+}
+
+function calcPCS(pid) {
+  const data  = state.pcs[pid]||{};
+  let total   = 0;
+  PCS_AXES.forEach(ax => { total += (data[ax.key]||0)*ax.weight; });
+  document.getElementById('pcs-total').textContent = total.toFixed(2);
+  const gradeEl = document.getElementById('pcs-grade');
+  let grade='C', bg='#fde8e8', fc='#c0392b';
+  if(total>=4.0){grade='S';bg='#fef9e7';fc='#7a5c00';}
+  else if(total>=3.0){grade='A';bg=`var(--green-light)`;fc='var(--green-dark)';}
+  else if(total>=2.0){grade='B';bg='var(--blue-light)';fc='#1a6fa0';}
+  gradeEl.textContent = grade;
+  gradeEl.style.background=bg; gradeEl.style.color=fc;
+  // 파트너 카드 업데이트
+  updatePartnerCard(pid, total, grade);
+}
+
+function renderPCSRadar() {
+  const pid  = document.getElementById('pcs-partner-select')?.value;
+  const data = state.pcs[pid]||{};
+  const vals = PCS_AXES.map(ax=>(data[ax.key]||0));
+  const ctx  = document.getElementById('pcs-radar');
+  if(pcsRadarChart){ pcsRadarChart.destroy(); }
+  pcsRadarChart = new Chart(ctx, {
+    type:'radar',
+    data:{
+      labels: PCS_AXES.map(a=>a.label.split('. ')[1]),
+      datasets:[{
+        label: PARTNERS.find(p=>p.id===pid)?.name||'',
+        data: vals,
+        backgroundColor:'rgba(118,185,0,0.2)',
+        borderColor:'#76B900',
+        pointBackgroundColor:'#76B900',
+      }]
+    },
+    options:{scales:{r:{min:0,max:5,ticks:{stepSize:1}}}, plugins:{legend:{display:false}}}
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// 2.1 Competency 목록
+// ══════════════════════════════════════════════════════════════════════
+function buildCompList() {
+  const el = document.getElementById('comp-list');
+  const colors=['#76B900','#1A6FA0','#e67e22','#8e44ad','#e74c3c','#27ae60','#2980b9','#f39c12'];
+  el.innerHTML = COMPS.map((c,i)=>`
+    <div class="fw-item" style="border-left-color:${colors[i]};">
+      <div class="fw-title">${c.code} — ${c.name}</div>
+      <div class="fw-desc">${c.desc}</div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// 3.1 파트너 카드 목록
+// ══════════════════════════════════════════════════════════════════════
+function buildPartnerList() {
+  const list = document.getElementById('partner-list');
+  list.innerHTML = PARTNERS.map(p => {
+    const pcs  = state.pcs[p.id];
+    const score= pcs ? PCS_AXES.reduce((s,a)=>s+(pcs[a.key]||0)*a.weight,0) : null;
+    return `
+    <div class="partner-card" onclick="goToProfile('${p.id}')">
+      <div class="pc-header">
+        <div class="pc-name">${p.name}</div>
+        <span class="pc-type" style="${TYPE_BADGE_STYLE[p.type]}">${p.type}</span>
+      </div>
+      <div class="pc-body">
+        <div class="pc-row"><span class="pc-key">FY26 Revenue</span>
+          <input class="pc-input" type="number" placeholder="입력" onclick="event.stopPropagation()"
+            data-pid="${p.id}" data-field="rev26"
+            oninput="saveProfileField(this)" value="${(state.profiles[p.id]?.rev26)||''}"/><span style="font-size:11px;color:var(--gray-500);margin-left:3px;">$K</span></div>
+        <div class="pc-row"><span class="pc-key">Deal Count</span>
+          <input class="pc-input" type="number" placeholder="입력" onclick="event.stopPropagation()"
+            data-pid="${p.id}" data-field="deals"
+            oninput="saveProfileField(this)" value="${(state.profiles[p.id]?.deals)||''}"/></div>
+        <div class="pc-row"><span class="pc-key">PCS 점수</span>
+          <span class="pc-val" id="card-pcs-${p.id}">${score ? score.toFixed(2) : '—'}</span></div>
+        <div class="pc-row"><span class="pc-key">NPN Level</span>
+          <select class="level-select" style="font-size:11px;" onclick="event.stopPropagation()"
+            data-pid="${p.id}" onchange="saveProfileLevel(this)">
+            ${LEVELS.map(l=>`<option${(state.profiles[p.id]?.level===l)?' selected':''}>${l}</option>`).join('')}
+          </select></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function saveProfileField(inp) {
+  const pid = inp.dataset.pid, field = inp.dataset.field;
+  if(!state.profiles[pid]) state.profiles[pid]={};
+  state.profiles[pid][field] = +inp.value||0;
+}
+function saveProfileLevel(sel) {
+  const pid = sel.dataset.pid;
+  if(!state.profiles[pid]) state.profiles[pid]={};
+  state.profiles[pid].level = sel.value;
+  sel.className = `level-select ${sel.value==='Elite'?'elite':sel.value==='Preferred'?'preferred':sel.value==='Registered'?'registered':'none'}`;
+}
+function updatePartnerCard(pid, total, grade) {
+  const el = document.getElementById(`card-pcs-${pid}`);
+  if(el) el.textContent = total.toFixed(2)+` (${grade})`;
+}
+function goToProfile(pid) {
+  document.querySelector('[data-sec="s32"]').click();
+  document.getElementById('profile-select').value = pid;
+  loadProfile();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// 3.2 상세 프로파일
+// ══════════════════════════════════════════════════════════════════════
+function buildProfileSelect() {
+  const sel = document.getElementById('profile-select');
+  sel.innerHTML = PARTNERS.map(p=>`<option value="${p.id}">${p.name} (${p.type})</option>`).join('');
+}
+
+function loadProfile() {
+  const pid = document.getElementById('profile-select').value;
+  const p   = PARTNERS.find(x=>x.id===pid);
+  const pr  = state.profiles[pid]||{};
+  const pcs = state.pcs[pid]||{};
+  const sw  = state.swot[pid]||{};
+  const score = PCS_AXES.reduce((s,a)=>s+(pcs[a.key]||0)*a.weight,0);
+
+  const fields = [
+    {key:'pam',       label:'담당 PAM'},
+    {key:'founded',   label:'설립연도'},
+    {key:'employees', label:'임직원 수'},
+    {key:'industries',label:'주요 산업'},
+    {key:'renewed',   label:'NPN 갱신일'},
+  ];
+
+  const html = `
+  <div class="card">
+    <div class="card-title" style="background:var(--navy);color:#fff;margin:-24px -24px 20px;padding:18px 24px;border-radius:var(--radius) var(--radius) 0 0;">
+      <span style="font-size:18px;">${p.name}</span>
+      <span class="badge" style="margin-left:10px;${TYPE_BADGE_STYLE[p.type]}">${p.type}</span>
+      <span class="badge" style="margin-left:6px;background:var(--green-light);color:var(--green-dark);">${pr.level||'—'}</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+      ${fields.map(f=>`
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:11px;color:var(--gray-500);font-weight:600;">${f.label}</label>
+          <input class="num-input" type="text" style="width:100%;text-align:left;" placeholder="입력"
+            data-pid="${pid}" data-field="${f.key}"
+            oninput="saveProfileField(this)"
+            value="${pr[f.key]||''}"/>
+        </div>`).join('')}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="num">B</span> FY별 매출 분석</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>지표</th>${FY_YEARS.map(fy=>`<th>${fy}</th>`).join('')}<th style="background:var(--green);">YoY (FY25→26)</th></tr></thead>
+        <tbody>
+          ${['Revenue ($K)','Deal Count','Avg Deal Size ($K)'].map((label,ri)=>`
+          <tr><td><strong>${label}</strong></td>
+          ${FY_YEARS.map(fy=>`<td>
+            <input class="num-input" type="number" placeholder="—"
+              data-pid="${pid}" data-field="prof_${ri}_${fy}"
+              oninput="saveProfileField(this)"
+              value="${pr[`prof_${ri}_${fy}`]||''}"/>
+          </td>`).join('')}
+          <td><span class="calc-cell" id="prof-yoy-${pid}-${ri}">—</span></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:11px;color:var(--gray-500);margin-top:8px;">💡 Avg Deal Size는 Revenue / Deal Count로 자동 계산도 가능합니다.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="num">C</span> PCS 평가 요약</div>
+    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+      <div style="font-size:42px;font-weight:700;color:var(--navy);">${score>0?score.toFixed(2):'—'}</div>
+      <div>
+        <div style="font-size:12px;color:var(--gray-500);margin-bottom:4px;">PCS 등급</div>
+        <div style="font-size:20px;font-weight:700;">${score>=4?'S — Strategic':score>=3?'A — Growth':score>=2?'B — Development':score>0?'C — Watch':'미입력'}</div>
+      </div>
+      <div style="margin-left:auto;font-size:12px;color:var(--gray-500);">
+        <a href="#" onclick="document.querySelector('[data-sec=s23]').click();document.getElementById('pcs-partner-select').value='${pid}';loadPCS();return false;"
+          style="color:var(--green);text-decoration:none;font-weight:600;">PCS 점수 입력하기 →</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="num">SWOT</span> SWOT 분석</div>
+    <div class="swot-grid">
+      <div class="swot-cell s"><div class="swot-title">💪 Strengths</div>
+        <textarea class="swot-input" placeholder="강점 입력..." data-pid="${pid}" data-sw="s" oninput="saveSWOT(this)">${sw.s||''}</textarea></div>
+      <div class="swot-cell w"><div class="swot-title">⚠️ Weaknesses</div>
+        <textarea class="swot-input" placeholder="약점 입력..." data-pid="${pid}" data-sw="w" oninput="saveSWOT(this)">${sw.w||''}</textarea></div>
+      <div class="swot-cell o"><div class="swot-title">🚀 Opportunities</div>
+        <textarea class="swot-input" placeholder="기회 입력..." data-pid="${pid}" data-sw="o" oninput="saveSWOT(this)">${sw.o||''}</textarea></div>
+      <div class="swot-cell t"><div class="swot-title">🔥 Threats</div>
+        <textarea class="swot-input" placeholder="위협 입력..." data-pid="${pid}" data-sw="t" oninput="saveSWOT(this)">${sw.t||''}</textarea></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="num">D</span> 액션 플랜</div>
+    <div class="tbl-wrap">
+      <table id="action-table-${pid}">
+        <thead><tr><th>#</th><th>과제</th><th>목표</th><th>기한</th><th>담당</th><th>상태</th></tr></thead>
+        <tbody id="action-body-${pid}"></tbody>
+      </table>
+    </div>
+    <button onclick="addActionRow('${pid}')" style="margin-top:10px;padding:7px 16px;background:var(--green);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;">+ 과제 추가</button>
+  </div>
+  `;
+  document.getElementById('profile-content').innerHTML = html;
+}
+
+function saveSWOT(el) {
+  const pid = el.dataset.pid, sw = el.dataset.sw;
+  if(!state.swot[pid]) state.swot[pid]={};
+  state.swot[pid][sw] = el.value;
+}
+
+function addActionRow(pid) {
+  const body = document.getElementById(`action-body-${pid}`);
+  const n = body.rows.length+1;
+  const statuses = ['진행 전','진행 중','완료'];
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td style="color:var(--gray-500);">${n}</td>
+    <td><input type="text" style="width:160px;padding:4px 6px;border:1px solid var(--gray-300);border-radius:4px;font-size:12px;" placeholder="과제 입력"/></td>
+    <td><input type="text" style="width:100px;padding:4px 6px;border:1px solid var(--gray-300);border-radius:4px;font-size:12px;" placeholder="목표"/></td>
+    <td><input type="text" style="width:80px;padding:4px 6px;border:1px solid var(--gray-300);border-radius:4px;font-size:12px;" placeholder="FY26 Q2"/></td>
+    <td><input type="text" style="width:80px;padding:4px 6px;border:1px solid var(--gray-300);border-radius:4px;font-size:12px;" placeholder="PAM"/></td>
+    <td><select style="padding:4px;border-radius:4px;border:1px solid var(--gray-300);font-family:inherit;font-size:12px;">
+      ${statuses.map(s=>`<option>${s}</option>`).join('')}</select></td>
+  `;
+  body.appendChild(tr);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// 초기화
+// ══════════════════════════════════════════════════════════════════════
+function init() {
+  buildDistTable();
+  buildMatrix();
+  buildRevTable();
+  buildKPI();
+  buildPCSSelect();
+  buildProfileSelect();
+  buildCompList();
+  buildPartnerList();
+  loadPCS();
+  loadProfile();
+  recalcRev();
+  updateStats();
+  setTimeout(renderPositionMap, 300);
+}
+
+init();
+</script>
+</body>
+</html>

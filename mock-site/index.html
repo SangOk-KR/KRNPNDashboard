@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NVIDIA NPN 파트너 관리 기획서</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{
+  --green:#76B900;--green-light:#e8f5cc;--green-dark:#558800;
+  --navy:#1A1A2E;--gray-100:#f7f8fa;--gray-200:#eef0f3;--gray-300:#dde0e6;
+  --gray-500:#8a909e;--gray-700:#4a5060;--gray-900:#1e2330;
+  --white:#ffffff;--blue-light:#daeaf6;--yellow-light:#fff8e1;
+  --radius:10px;--shadow:0 2px 12px rgba(0,0,0,.08);--sidebar-w:220px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--gray-100);color:var(--gray-900);display:flex;min-height:100vh;}
+
+/* SIDEBAR */
+#sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--navy);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:100;}
+.sidebar-logo{padding:24px 20px 16px;border-bottom:1px solid rgba(255,255,255,.1);}
+.sidebar-logo .brand{color:var(--green);font-weight:700;font-size:16px;}
+.sidebar-logo .pub-badge{display:inline-block;background:var(--green);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;margin-left:6px;vertical-align:middle;}
+.sidebar-logo .sub{color:rgba(255,255,255,.4);font-size:10px;margin-top:4px;}
+.nav-section{padding:18px 0 4px 18px;font-size:10px;font-weight:700;color:rgba(255,255,255,.35);letter-spacing:1px;text-transform:uppercase;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 18px;color:rgba(255,255,255,.65);font-size:13px;cursor:pointer;transition:all .15s;border-left:3px solid transparent;}
+.nav-item:hover{background:rgba(255,255,255,.07);color:#fff;}
+.nav-item.active{background:rgba(118,185,0,.15);color:var(--green);border-left-color:var(--green);}
+.nav-item .icon{font-size:15px;width:18px;text-align:center;}
+
+/* MAIN */
+#main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;}
+#topbar{background:#fff;border-bottom:3px solid var(--green);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.topbar-left{display:flex;align-items:center;gap:12px;}
+.topbar-title{font-size:15px;font-weight:700;color:var(--gray-900);}
+.pub-tag{background:var(--green);color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;}
+.admin-link{display:flex;align-items:center;gap:6px;text-decoration:none;background:#fde8e8;color:#c0392b;font-size:12px;font-weight:600;padding:6px 14px;border-radius:6px;transition:all .15s;}
+.admin-link:hover{background:#e74c3c;color:#fff;}
+.last-updated{font-size:11px;color:var(--gray-500);}
+#content{padding:32px;display:flex;flex-direction:column;gap:28px;}
+
+/* SECTION */
+.section{display:none;}
+.section.active{display:flex;flex-direction:column;gap:24px;}
+.section-title{font-size:22px;font-weight:700;color:var(--gray-900);border-left:4px solid var(--green);padding-left:14px;}
+.section-desc{font-size:13px;color:var(--gray-500);margin-top:4px;padding-left:18px;}
+
+/* CARD */
+.card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;}
+.card-title{font-size:15px;font-weight:700;color:var(--gray-900);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.card-title .num{background:var(--navy);color:#fff;border-radius:6px;padding:2px 8px;font-size:12px;}
+
+/* STAT */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;}
+.stat-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px;border-top:3px solid var(--green);}
+.stat-label{font-size:11px;color:var(--gray-500);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+.stat-value{font-size:28px;font-weight:700;color:var(--gray-900);margin:6px 0 2px;}
+.stat-sub{font-size:11px;color:var(--gray-500);}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{background:var(--navy);color:#fff;padding:10px 12px;text-align:center;font-weight:600;font-size:12px;white-space:nowrap;}
+thead th:first-child{text-align:left;}
+tbody tr:nth-child(even){background:var(--gray-100);}
+tbody td{padding:9px 12px;border-bottom:1px solid var(--gray-200);color:var(--gray-700);text-align:center;}
+tbody td:first-child{text-align:left;font-weight:500;color:var(--gray-900);}
+.tfoot-row td{background:var(--navy);color:#fff;font-weight:700;padding:10px 12px;}
+.val-cell{font-weight:600;color:var(--gray-900);}
+.empty-cell{color:var(--gray-300);font-style:italic;}
+.calc-cell{background:var(--green-light);color:var(--green-dark);font-weight:600;border-radius:6px;padding:4px 8px;display:inline-block;min-width:60px;text-align:center;}
+.calc-cell.neg{background:#fde8e8;color:#c0392b;}
+
+/* LEVEL BADGE */
+.level-badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;}
+.level-elite{background:#fef9e7;border:1px solid #f0c040;color:#7a5c00;}
+.level-preferred{background:var(--green-light);border:1px solid var(--green);color:var(--green-dark);}
+.level-registered{background:var(--blue-light);border:1px solid #5ba3c9;color:#1a5f80;}
+.level-none{background:var(--gray-100);color:var(--gray-300);}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;}
+.badge-green{background:var(--green-light);color:var(--green-dark);}
+.badge-blue{background:var(--blue-light);color:#1a6fa0;}
+.badge-yellow{background:var(--yellow-light);color:#7a5c00;}
+
+/* PCS */
+.pcs-bar{flex:1;height:10px;background:var(--gray-200);border-radius:99px;overflow:hidden;display:inline-block;width:100px;}
+.pcs-bar-fill{height:100%;background:var(--green);border-radius:99px;}
+.pcs-grade-badge{display:inline-block;padding:4px 14px;border-radius:99px;font-size:14px;font-weight:700;margin-left:10px;}
+
+/* POSITIONING MAP */
+.pos-map{position:relative;width:100%;height:380px;border:1.5px solid var(--gray-300);border-radius:var(--radius);background:linear-gradient(135deg,#f0f4ff 0%,#e8f5cc 100%);}
+.pos-axis-x{position:absolute;bottom:10px;left:0;right:0;text-align:center;font-size:11px;color:var(--gray-500);}
+.pos-axis-y{position:absolute;left:8px;top:0;bottom:0;display:flex;align-items:center;writing-mode:vertical-rl;transform:rotate(180deg);font-size:11px;color:var(--gray-500);}
+.pos-quadrant{position:absolute;font-size:10px;font-weight:700;opacity:.5;padding:6px;}
+.pos-dot{position:absolute;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;transform:translate(-50%,-50%);transition:all .5s;border:2px solid rgba(255,255,255,.8);box-shadow:0 2px 8px rgba(0,0,0,.2);}
+.pos-dot:hover{transform:translate(-50%,-50%) scale(1.2);z-index:10;}
+.pos-dot-label{position:absolute;font-size:9px;white-space:nowrap;top:100%;left:50%;transform:translateX(-50%);margin-top:2px;font-weight:600;color:var(--gray-900);}
+.pos-divider-v{position:absolute;top:0;bottom:0;left:50%;border-left:1.5px dashed var(--gray-300);}
+.pos-divider-h{position:absolute;left:0;right:0;top:50%;border-top:1.5px dashed var(--gray-300);}
+
+/* SWOT */
+.swot-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--gray-300);border-radius:var(--radius);overflow:hidden;}
+.swot-cell{background:#fff;padding:16px;}
+.swot-cell.s{border-top:3px solid #27ae60;}.swot-cell.w{border-top:3px solid #e74c3c;}
+.swot-cell.o{border-top:3px solid #2980b9;}.swot-cell.t{border-top:3px solid #f39c12;}
+.swot-title{font-size:12px;font-weight:700;margin-bottom:8px;}
+.swot-cell.s .swot-title{color:#27ae60;}.swot-cell.w .swot-title{color:#e74c3c;}
+.swot-cell.o .swot-title{color:#2980b9;}.swot-cell.t .swot-title{color:#f39c12;}
+.swot-content{font-size:12px;color:var(--gray-700);line-height:1.7;white-space:pre-wrap;}
+.swot-empty{font-size:12px;color:var(--gray-300);font-style:italic;}
+
+/* PARTNER CARD */
+.partner-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+.partner-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s;}
+.partner-card:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,.12);}
+.pc-header{background:var(--navy);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;}
+.pc-name{color:#fff;font-weight:700;font-size:15px;}
+.pc-type{font-size:11px;padding:2px 8px;border-radius:99px;font-weight:600;}
+.pc-body{padding:16px 18px;}
+.pc-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--gray-200);}
+.pc-row:last-child{border-bottom:none;}
+.pc-key{font-size:12px;color:var(--gray-500);}
+.pc-val{font-size:12px;font-weight:600;color:var(--gray-900);}
+
+/* NO DATA */
+.no-data-banner{background:var(--gray-100);border:2px dashed var(--gray-300);border-radius:var(--radius);padding:32px;text-align:center;color:var(--gray-500);}
+.no-data-banner .icon{font-size:40px;margin-bottom:12px;}
+.no-data-banner p{font-size:14px;line-height:1.6;}
+
+/* FW */
+.fw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;}
+.fw-item{background:var(--gray-100);border-radius:8px;padding:14px 16px;border-left:3px solid var(--green);}
+.fw-title{font-size:13px;font-weight:700;color:var(--gray-900);margin-bottom:6px;}
+.fw-desc{font-size:12px;color:var(--gray-500);line-height:1.6;}
+</style>
+<!-- Firebase SDK (v9 compat — CDN) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <div><span class="brand">NVIDIA NPN</span><span class="pub-badge">PUBLIC</span></div>
+    <div class="sub">파트너 관리 기획서 v2.0</div>
+  </div>
+  <div class="nav-section">PART 1. 포트폴리오</div>
+  <div class="nav-item active" data-sec="s11" onclick="nav(this)"><span class="icon">📊</span><span>1.1 파트너 현황</span></div>
+  <div class="nav-item" data-sec="s12" onclick="nav(this)"><span class="icon">🗂️</span><span>1.2 Competency 매트릭스</span></div>
+  <div class="nav-item" data-sec="s13" onclick="nav(this)"><span class="icon">📈</span><span>1.3 매출 분석</span></div>
+  <div class="nav-item" data-sec="s14" onclick="nav(this)"><span class="icon">🗺️</span><span>1.4 포지셔닝 맵</span></div>
+  <div class="nav-section">PART 2. 프레임워크</div>
+  <div class="nav-item" data-sec="s21" onclick="nav(this)"><span class="icon">🔖</span><span>2.1 분류 기준</span></div>
+  <div class="nav-item" data-sec="s22" onclick="nav(this)"><span class="icon">📐</span><span>2.2 KPI 정의</span></div>
+  <div class="nav-item" data-sec="s23" onclick="nav(this)"><span class="icon">⭐</span><span>2.3 PCS 평가 모델</span></div>
+  <div class="nav-section">PART 3. 파트너 프로파일</div>
+  <div class="nav-item" data-sec="s31" onclick="nav(this)"><span class="icon">👥</span><span>파트너 목록</span></div>
+  <div class="nav-item" data-sec="s32" onclick="nav(this)"><span class="icon">📋</span><span>상세 프로파일</span></div>
+</nav>
+
+<div id="main">
+  <div id="topbar">
+    <div class="topbar-left">
+      <div class="topbar-title">NVIDIA NPN 파트너 관리 기획서</div>
+      <span class="pub-tag">📖 열람 전용</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span class="last-updated" id="last-updated">데이터 로드 중...</span>
+      <a class="admin-link" href="admin.html">🔒 어드민</a>
+    </div>
+  </div>
+
+  <div id="content">
+
+    <!-- 1.1 파트너 현황 -->
+    <div id="s11" class="section active">
+      <div><div class="section-title">1.1 파트너 현황 스냅샷</div></div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-label">총 파트너 수</div><div class="stat-value" id="v-total-partners">—</div><div class="stat-sub">SP + SA + Distributor</div></div>
+        <div class="stat-card" style="border-top-color:#f0c040;"><div class="stat-label">Elite 파트너</div><div class="stat-value" id="v-total-elite">—</div><div class="stat-sub">전체 대비 <span id="v-elite-pct">—</span></div></div>
+        <div class="stat-card" style="border-top-color:#5ba3c9;"><div class="stat-label">FY26 총매출</div><div class="stat-value" id="v-total-rev">—</div><div class="stat-sub">Net Revenue (USD M)</div></div>
+        <div class="stat-card" style="border-top-color:#9b59b6;"><div class="stat-label">YoY 성장률</div><div class="stat-value" id="v-yoy-rate">—</div><div class="stat-sub">FY25 → FY26</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="num">1.1</span> Type × Level 분포</div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Level \ Type</th><th>SP</th><th>SA</th><th>Distributor</th><th style="background:var(--green);">소계</th></tr></thead>
+          <tbody id="v-dist-body"></tbody>
+          <tfoot><tr class="tfoot-row" id="v-dist-foot"></tr></tfoot>
+        </table></div>
+      </div>
+      <div class="card" id="v-changes-card">
+        <div class="card-title"><span class="num">1.1</span> FY26 주요 변동 사항</div>
+        <div id="v-changes-content"></div>
+      </div>
+    </div>
+
+    <!-- 1.2 매트릭스 -->
+    <div id="s12" class="section">
+      <div><div class="section-title">1.2 Competency × Level 전체 매트릭스</div></div>
+      <div class="card">
+        <div class="card-title"><span class="num">1.2</span> 매트릭스
+          <span style="margin-left:auto;font-size:11px;color:var(--gray-500);">
+            <span style="background:#fef9e7;padding:2px 6px;border-radius:4px;border:1px solid #f0c040;">★★★ Elite</span>&nbsp;
+            <span style="background:var(--green-light);padding:2px 6px;border-radius:4px;border:1px solid var(--green);">★★ Preferred</span>&nbsp;
+            <span style="background:var(--blue-light);padding:2px 6px;border-radius:4px;">★ Registered</span>
+          </span>
+        </div>
+        <div class="tbl-wrap"><table id="v-matrix-table"></table></div>
+      </div>
+    </div>
+
+    <!-- 1.3 매출 분석 -->
+    <div id="s13" class="section">
+      <div><div class="section-title">1.3 FY별 Competency 매출 분석</div></div>
+      <div class="card">
+        <div class="card-title"><span class="num">1.3</span> 매출 테이블</div>
+        <div class="tbl-wrap"><table id="v-rev-table">
+          <thead><tr>
+            <th>Competency</th><th>FY24 Revenue</th><th>FY25 Revenue</th><th>FY26 Revenue</th>
+            <th style="background:var(--green);">CAGR</th>
+            <th>FY24 Mix%</th><th>FY25 Mix%</th><th style="background:#b8860b;">FY26 Mix%</th>
+          </tr></thead>
+          <tbody id="v-rev-body"></tbody>
+          <tfoot><tr id="v-rev-foot" class="tfoot-row"></tr></tfoot>
+        </table></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="num">1.3</span> FY별 Competency Mix 차트</div>
+        <canvas id="v-mix-chart" height="90"></canvas>
+      </div>
+    </div>
+
+    <!-- 1.4 포지셔닝 맵 -->
+    <div id="s14" class="section">
+      <div><div class="section-title">1.4 경쟁력 포지셔닝 맵</div></div>
+      <div class="card">
+        <div class="card-title"><span class="num">1.4</span> 포지셔닝 맵</div>
+        <div class="pos-map" id="v-pos-map">
+          <div class="pos-divider-v"></div><div class="pos-divider-h"></div>
+          <div class="pos-quadrant" style="top:8px;left:8px;color:#888;">Specialist</div>
+          <div class="pos-quadrant" style="top:8px;right:8px;color:var(--green-dark);">⭐ Star</div>
+          <div class="pos-quadrant" style="bottom:8px;left:8px;color:#888;">Emerging</div>
+          <div class="pos-quadrant" style="bottom:8px;right:8px;color:#c0392b;">Wide-Underperform</div>
+          <div class="pos-axis-x">← Competency Coverage (C1) →</div>
+          <div class="pos-axis-y">Revenue Performance (C2)</div>
+        </div>
+        <div style="display:flex;gap:14px;margin-top:12px;flex-wrap:wrap;">
+          <span style="font-size:12px;"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#27ae60;margin-right:5px;"></span>SP</span>
+          <span style="font-size:12px;"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#2980b9;margin-right:5px;"></span>SA</span>
+          <span style="font-size:12px;"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#8e44ad;margin-right:5px;"></span>Distributor</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2.1 분류 기준 -->
+    <div id="s21" class="section">
+      <div><div class="section-title">2.1 파트너 분류 기준</div></div>
+      <div class="card"><div class="card-title"><span class="num">Type</span> 파트너 유형</div>
+        <div class="fw-grid">
+          <div class="fw-item"><div class="fw-title">🏢 SP — Solution Provider</div><div class="fw-desc">직접 판매·구축. 영업, 기술 컨설팅, 사후지원. Transacting.</div></div>
+          <div class="fw-item" style="border-left-color:#2980b9;"><div class="fw-title">💡 SA — Solution Advisor</div><div class="fw-desc">컨설팅·자문 중심. Non-transacting, SP 경유 Resell.</div></div>
+          <div class="fw-item" style="border-left-color:#8e44ad;"><div class="fw-title">🏭 Distributor</div><div class="fw-desc">총판. 물류, 라이선스 공급, 채널 인에이블먼트.</div></div>
+        </div>
+      </div>
+      <div class="card"><div class="card-title"><span class="num">Comp</span> Competency 8개</div><div class="fw-grid" id="v-comp-list"></div></div>
+      <div class="card"><div class="card-title"><span class="num">Level</span> 인정 기준</div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Level</th><th>인정 조건</th><th>주요 혜택</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-yellow">★★★ Elite</span></td><td>인증 엔지니어 N명+ · 매출 상위 X% · Comp N개+</td><td>MDF 최우선 · Co-sell 우선 · Exec Access</td></tr>
+            <tr><td><span class="badge badge-green">★★ Preferred</span></td><td>인증 엔지니어 N명+ · 핵심 Comp 보유 · 매출 기준</td><td>MDF 지원 · 트레이닝 우선 · Demo 장비</td></tr>
+            <tr><td><span class="badge badge-blue">★ Registered</span></td><td>NPN 등록 + Comp 1개+</td><td>카탈로그 접근 · 기본 트레이닝</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- 2.2 KPI -->
+    <div id="s22" class="section">
+      <div><div class="section-title">2.2 매출 분석 KPI 정의</div></div>
+      <div class="card"><div class="card-title"><span class="num">KPI</span></div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>KPI</th><th>정의 및 산식</th><th>활용 목적</th></tr></thead>
+          <tbody id="v-kpi-body"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- 2.3 PCS -->
+    <div id="s23" class="section">
+      <div><div class="section-title">2.3 PCS 경쟁력 평가 모델</div></div>
+      <div class="card">
+        <div class="card-title"><span class="num">PCS</span> 파트너 선택
+          <select id="v-pcs-select" onchange="renderPCS()" style="margin-left:12px;padding:5px 10px;border-radius:6px;border:1.5px solid var(--gray-300);font-family:inherit;font-size:13px;"></select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <div id="v-pcs-rows"></div>
+          <div><canvas id="v-pcs-radar" height="220"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3.1 파트너 목록 -->
+    <div id="s31" class="section">
+      <div><div class="section-title">파트너 목록</div></div>
+      <div class="partner-list" id="v-partner-list"></div>
+    </div>
+
+    <!-- 3.2 상세 프로파일 -->
+    <div id="s32" class="section">
+      <div>
+        <div class="section-title">파트너 상세 프로파일</div>
+        <div class="section-desc">파트너 선택:
+          <select id="v-profile-select" onchange="renderProfile()" style="margin-left:8px;padding:5px 10px;border-radius:6px;border:1.5px solid var(--gray-300);font-family:inherit;font-size:13px;"></select>
+        </div>
+      </div>
+      <div id="v-profile-content"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY='nvidia_npn_v2';
+const COMPS=[
+  {code:"AI-COMP",name:"AI Computing",desc:"DGX, HGX, BasePOD — 생성형 AI/LLM"},
+  {code:"AI-ENT",name:"AI Enterprise SW",desc:"NVAIE, NIM, NeMo, Morpheus"},
+  {code:"DC-COMP",name:"Data Center Comp",desc:"일반 GPU 컴퓨팅, HPC"},
+  {code:"NETWORK",name:"Networking",desc:"Spectrum-X, Quantum IB, BlueField DPU"},
+  {code:"VIZ",name:"Visualization",desc:"RTX Pro, Omniverse"},
+  {code:"VIRT",name:"Virtual GPU",desc:"vGPU, VDI"},
+  {code:"EDGE",name:"Edge Computing",desc:"Jetson, IGX Orin"},
+  {code:"AUTO",name:"Automotive",desc:"DRIVE Orin, DRIVE Thor"},
+];
+const LEVELS=["Elite","Preferred","Registered","—"];
+const FY_YEARS=["FY24","FY25","FY26"];
+const PARTNERS=[
+  {id:"p1",name:"Partner A",type:"SP"},{id:"p2",name:"Partner B",type:"SP"},
+  {id:"p3",name:"Partner C",type:"SP"},{id:"p4",name:"Partner D",type:"SP"},
+  {id:"p5",name:"Partner E",type:"SA"},{id:"p6",name:"Partner F",type:"SA"},
+  {id:"p7",name:"Partner G",type:"Distributor"},{id:"p8",name:"Partner H",type:"Distributor"},
+];
+const TYPE_BADGE={SP:"background:#d5e8d4;color:#27ae60;",SA:"background:#dae8fc;color:#2980b9;",Distributor:"background:#ffe6cc;color:#8e44ad;"};
+const TYPE_COLOR={SP:"#27ae60",SA:"#2980b9",Distributor:"#8e44ad"};
+const PCS_AXES=[
+  {key:'c1',label:'C1. Competency Coverage',weight:.20},
+  {key:'c2',label:'C2. Revenue Performance',weight:.30},
+  {key:'c3',label:'C3. Technical Capability',weight:.20},
+  {key:'c4',label:'C4. Market Reach',weight:.15},
+  {key:'c5',label:'C5. Strategic Alignment',weight:.15},
+];
+
+const DEFAULT_STATE = {
+  dist:{Elite:{SP:0,SA:0,Dist:0},Preferred:{SP:0,SA:0,Dist:0},Registered:{SP:0,SA:0,Dist:0}},
+  matrix:{},revenue:{},pcs:{},profiles:{},swot:{},changes:[],totalRev:'',yoy:'',actionPlans:{}
+};
+let state={...DEFAULT_STATE}, vMixChart=null, vPCSRadar=null;
+function val(v,suffix=''){return (v!==undefined&&v!==null&&v!=='')?String(v)+suffix:'<span class="empty-cell">미입력</span>';}
+function numVal(v,suffix=''){return (v&&+v>0)?Number(v).toLocaleString()+suffix:'<span class="empty-cell">—</span>';}
+
+// 네비게이션
+function nav(el){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(el.dataset.sec).classList.add('active');
+  if(el.dataset.sec==='s14') renderPositionMap();
+  if(el.dataset.sec==='s23') renderPCS();
+}
+
+// 전체 렌더
+function renderAll(){
+  render11(); render12(); render13(); render31(); render32setup();
+  buildStaticContent();
+  document.getElementById('last-updated').textContent=
+    '최종 업데이트: '+new Date().toLocaleTimeString('ko-KR');
+}
+
+// 1.1
+function render11(){
+  const d=state.dist||{};
+  const levels=['Elite','Preferred','Registered'], types=['SP','SA','Dist'];
+  let grand=0, eliteSum=0;
+
+  // stat cards
+  let tot=0;
+  levels.forEach(lv=>{types.forEach(tp=>{tot+=(d[lv]?.[tp]||0);});});
+  levels.forEach(lv=>{let r=0;types.forEach(tp=>{r+=(d[lv]?.[tp]||0);});if(lv==='Elite')eliteSum=r;grand+=r;});
+
+  document.getElementById('v-total-partners').textContent=grand||'—';
+  document.getElementById('v-total-elite').textContent=eliteSum||'—';
+  document.getElementById('v-elite-pct').textContent=grand>0?Math.round(eliteSum/grand*100)+'%':'—';
+  document.getElementById('v-total-rev').textContent=(state.totalRev?state.totalRev+'$M':'—');
+  document.getElementById('v-yoy-rate').textContent=(state.yoy?state.yoy+'%':'—');
+
+  // dist table
+  const body=document.getElementById('v-dist-body'), foot=document.getElementById('v-dist-foot');
+  body.innerHTML=levels.map(lv=>{
+    let rowSum=0;
+    const cells=types.map(tp=>{const v=(d[lv]?.[tp]||0);rowSum+=v;return `<td class="${v>0?'val-cell':''}">${v||'—'}</td>`;}).join('');
+    return `<tr><td><span class="badge ${lv==='Elite'?'badge-yellow':lv==='Preferred'?'badge-green':'badge-blue'}">${lv}</span></td>${cells}<td class="calc-cell">${rowSum||'—'}</td></tr>`;
+  }).join('');
+  let colSums=types.map(tp=>levels.reduce((s,lv)=>s+(d[lv]?.[tp]||0),0));
+  foot.innerHTML=`<td>합계</td>${colSums.map(v=>`<td>${v||'—'}</td>`).join('')}<td style="background:var(--green);">${grand||'—'}</td>`;
+
+  // changes
+  const changes=state.changes||[];
+  const cc=document.getElementById('v-changes-content');
+  if(changes.filter(c=>c.name||c.desc).length===0){
+    cc.innerHTML='<div class="no-data-banner"><div class="icon">📋</div><p>어드민 페이지에서 변동 사항을 입력하면 이곳에 표시됩니다.</p></div>';
+  } else {
+    cc.innerHTML=`<div class="tbl-wrap"><table>
+      <thead><tr><th>구분</th><th>파트너명</th><th>내용</th><th>시점</th></tr></thead>
+      <tbody>${changes.filter(c=>c.name||c.desc).map(c=>`<tr>
+        <td><span class="badge badge-green">${c.type||'—'}</span></td>
+        <td>${c.name||'—'}</td><td>${c.desc||'—'}</td><td>${c.date||'—'}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  }
+}
+
+// 1.2
+function render12(){
+  const tbl=document.getElementById('v-matrix-table');
+  let h='<thead><tr><th>파트너</th><th>Type</th>';
+  COMPS.forEach(c=>{h+=`<th>${c.code}</th>`;});
+  h+='<th style="background:var(--green);">Elite 수</th></tr></thead><tbody>';
+  PARTNERS.forEach(p=>{
+    let eliteCnt=0;
+    h+=`<tr><td style="font-weight:600;">${p.name}</td><td><span class="badge" style="${TYPE_BADGE[p.type]}">${p.type}</span></td>`;
+    COMPS.forEach(c=>{
+      const lv=(state.matrix||{})[`${p.id}_${c.code}`]||'—';
+      if(lv==='Elite') eliteCnt++;
+      const cls=lv==='Elite'?'level-elite':lv==='Preferred'?'level-preferred':lv==='Registered'?'level-registered':'level-none';
+      const stars=lv==='Elite'?'★★★':lv==='Preferred'?'★★':lv==='Registered'?'★':'—';
+      h+=`<td><span class="level-badge ${cls}">${stars}</span></td>`;
+    });
+    h+=`<td><span class="calc-cell">${eliteCnt}</span></td></tr>`;
+  });
+  // 보유 파트너 수
+  h+='<tr style="background:var(--navy);"><td colspan="2" style="color:#fff;font-weight:700;text-align:center;padding:8px;">보유 파트너 수</td>';
+  COMPS.forEach(c=>{
+    let cnt=0; PARTNERS.forEach(p=>{const v=(state.matrix||{})[`${p.id}_${c.code}`];if(v&&v!=='—')cnt++;});
+    h+=`<td style="color:#fff;font-weight:700;text-align:center;">${cnt}</td>`;
+  });
+  h+='<td></td></tr></tbody>';
+  tbl.innerHTML=h;
+}
+
+// 1.3
+function render13(){
+  const rev=state.revenue||{};
+  const totals={};
+  FY_YEARS.forEach(fy=>{totals[fy]=COMPS.reduce((s,c)=>s+(rev[`${c.code}_${fy}`]||0),0);});
+  const body=document.getElementById('v-rev-body'), foot=document.getElementById('v-rev-foot');
+  body.innerHTML=COMPS.map(c=>{
+    const v24=rev[`${c.code}_FY24`]||0, v25=rev[`${c.code}_FY25`]||0, v26=rev[`${c.code}_FY26`]||0;
+    let cagrHtml='<span class="empty-cell">—</span>';
+    if(v24>0&&v26>0){const cagr=(Math.pow(v26/v24,1/2)-1)*100;cagrHtml=`<span class="calc-cell${cagr<0?' neg':''}">${cagr.toFixed(1)}%</span>`;}
+    const mixHtml=FY_YEARS.map(fy=>{
+      const val=rev[`${c.code}_${fy}`]||0, tot=totals[fy];
+      if(tot>0&&val>0){const pct=val/tot;return `<td><span class="calc-cell" style="background:rgba(118,185,0,${pct});color:${pct>.5?'#fff':'var(--gray-900)'};">${(pct*100).toFixed(1)}%</span></td>`;}
+      return `<td><span class="empty-cell">—</span></td>`;
+    }).join('');
+    return `<tr><td><strong>${c.code}</strong></td>
+      <td>${v24?v24.toLocaleString():'<span class="empty-cell">—</span>'}</td>
+      <td>${v25?v25.toLocaleString():'<span class="empty-cell">—</span>'}</td>
+      <td>${v26?v26.toLocaleString():'<span class="empty-cell">—</span>'}</td>
+      <td>${cagrHtml}</td>${mixHtml}</tr>`;
+  }).join('');
+  const t24=totals['FY24'], t25=totals['FY25'], t26=totals['FY26'];
+  let totCagr='<span class="empty-cell">—</span>';
+  if(t24>0&&t26>0){const tc=(Math.pow(t26/t24,1/2)-1)*100;totCagr=`${tc.toFixed(1)}%`;}
+  foot.innerHTML=`<td>합계</td><td>${t24?t24.toLocaleString():'—'}</td><td>${t25?t25.toLocaleString():'—'}</td><td>${t26?t26.toLocaleString():'—'}</td><td style="background:var(--green);">${totCagr}</td><td>100%</td><td>100%</td><td style="background:#b8860b;">100%</td>`;
+  renderMixChart(totals, rev);
+}
+function renderMixChart(totals, rev){
+  const ctx=document.getElementById('v-mix-chart');
+  const colors=['#76B900','#1A6FA0','#e67e22','#8e44ad','#e74c3c','#27ae60','#2980b9','#f39c12'];
+  const datasets=COMPS.map((c,i)=>({label:c.code,data:FY_YEARS.map(fy=>rev[`${c.code}_${fy}`]||0),backgroundColor:colors[i]+'cc',borderColor:colors[i],borderWidth:1}));
+  if(vMixChart)vMixChart.destroy();
+  vMixChart=new Chart(ctx,{type:'bar',data:{labels:FY_YEARS,datasets},options:{responsive:true,plugins:{legend:{position:'right'}},scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>v.toLocaleString()}}}}});
+}
+
+// 1.4
+function renderPositionMap(){
+  const map=document.getElementById('v-pos-map');
+  map.querySelectorAll('.pos-dot').forEach(d=>d.remove());
+  PARTNERS.forEach((p,i)=>{
+    const pcs=(state.pcs||{})[p.id]||{}, c1=pcs.c1||0, c2=pcs.c2||0;
+    const xPct=c1>0?(c1/5*80+10):(15+i*9)%85;
+    const yPct=c2>0?(100-(c2/5*80+10)):(20+i*10)%85;
+    const dot=document.createElement('div');
+    dot.className='pos-dot';dot.style.left=xPct+'%';dot.style.top=yPct+'%';
+    dot.style.background=TYPE_COLOR[p.type];
+    const score=PCS_AXES.reduce((s,a)=>s+(pcs[a.key]||0)*a.weight,0);
+    dot.title=`${p.name} | PCS: ${score.toFixed(2)}`;
+    dot.innerHTML=`<span style="color:#fff;font-size:9px;font-weight:700;">${p.name.replace('Partner ','')}</span><div class="pos-dot-label">${p.name}</div>`;
+    map.appendChild(dot);
+  });
+}
+
+// 2.3 PCS 보기
+function buildPCSSelect(){
+  const sel=document.getElementById('v-pcs-select');
+  sel.innerHTML=PARTNERS.map(p=>`<option value="${p.id}">${p.name} (${p.type})</option>`).join('');
+}
+function renderPCS(){
+  const pid=document.getElementById('v-pcs-select').value;
+  const data=(state.pcs||{})[pid]||{};
+  const total=PCS_AXES.reduce((s,a)=>s+(data[a.key]||0)*a.weight,0);
+  let grade='C',bg='#fde8e8',fc='#c0392b';
+  if(total>=4){grade='S';bg='#fef9e7';fc='#7a5c00';}
+  else if(total>=3){grade='A';bg='var(--green-light)';fc='var(--green-dark)';}
+  else if(total>=2){grade='B';bg='var(--blue-light)';fc='#1a6fa0';}
+
+  const container=document.getElementById('v-pcs-rows');
+  container.innerHTML=`
+    ${PCS_AXES.map(ax=>{
+      const v=data[ax.key]||0;
+      return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--gray-200);">
+        <div style="flex:1;font-size:13px;font-weight:500;">${ax.label}</div>
+        <div style="font-size:12px;color:var(--gray-500);width:38px;text-align:right;">${(ax.weight*100).toFixed(0)}%</div>
+        <div style="font-size:16px;font-weight:700;color:var(--navy);width:36px;text-align:center;">${v||'—'}</div>
+        <div class="pcs-bar"><div class="pcs-bar-fill" style="width:${v/5*100}%"></div></div>
+      </div>`;
+    }).join('')}
+    <div style="margin-top:16px;padding:16px;background:var(--gray-100);border-radius:8px;display:flex;align-items:center;">
+      <div>
+        <div style="font-size:12px;color:var(--gray-500);margin-bottom:4px;">PCS 합계</div>
+        <div style="display:flex;align-items:center;">
+          <div style="font-size:28px;font-weight:700;color:var(--navy);">${total>0?total.toFixed(2):'—'}</div>
+          <span class="pcs-grade-badge" style="background:${bg};color:${fc};">${total>0?grade:'-'}</span>
+        </div>
+      </div>
+    </div>`;
+  renderPCSRadar(pid, data);
+}
+function renderPCSRadar(pid, data){
+  const ctx=document.getElementById('v-pcs-radar');
+  if(vPCSRadar)vPCSRadar.destroy();
+  vPCSRadar=new Chart(ctx,{type:'radar',data:{
+    labels:PCS_AXES.map(a=>a.label.split('. ')[1]),
+    datasets:[{label:PARTNERS.find(p=>p.id===pid)?.name||'',data:PCS_AXES.map(ax=>data[ax.key]||0),backgroundColor:'rgba(118,185,0,0.2)',borderColor:'#76B900',pointBackgroundColor:'#76B900'}]
+  },options:{scales:{r:{min:0,max:5,ticks:{stepSize:1}}},plugins:{legend:{display:false}}}});
+}
+
+// 3.1 파트너 목록
+function render31(){
+  const list=document.getElementById('v-partner-list');
+  list.innerHTML=PARTNERS.map(p=>{
+    const pr=(state.profiles||{})[p.id]||{};
+    const pcs=(state.pcs||{})[p.id]||{};
+    const score=PCS_AXES.reduce((s,a)=>s+(pcs[a.key]||0)*a.weight,0);
+    let grade='-',bg='var(--gray-100)',fc='var(--gray-500)';
+    if(score>=4){grade='S';bg='#fef9e7';fc='#7a5c00';}
+    else if(score>=3){grade='A';bg=`var(--green-light)`;fc='var(--green-dark)';}
+    else if(score>=2){grade='B';bg='var(--blue-light)';fc='#1a6fa0';}
+    else if(score>0){grade='C';bg='#fde8e8';fc='#c0392b';}
+    return `<div class="partner-card" onclick="document.querySelector('[data-sec=s32]').click();document.getElementById('v-profile-select').value='${p.id}';renderProfile();">
+      <div class="pc-header"><div class="pc-name">${p.name}</div><span class="pc-type" style="${TYPE_BADGE[p.type]}">${p.type}</span></div>
+      <div class="pc-body">
+        <div class="pc-row"><span class="pc-key">NPN Level</span><span class="pc-val">
+          <span class="level-badge ${(pr.level||'—')==='Elite'?'level-elite':(pr.level||'—')==='Preferred'?'level-preferred':(pr.level||'—')==='Registered'?'level-registered':'level-none'}">${pr.level||'—'}</span>
+        </span></div>
+        <div class="pc-row"><span class="pc-key">FY26 Revenue</span><span class="pc-val">${pr.rev26?Number(pr.rev26).toLocaleString()+'$K':'—'}</span></div>
+        <div class="pc-row"><span class="pc-key">Deal Count</span><span class="pc-val">${pr.deals||'—'}</span></div>
+        <div class="pc-row"><span class="pc-key">PCS</span><span class="pc-val">
+          ${score>0?`<span style="background:${bg};color:${fc};padding:2px 8px;border-radius:99px;font-weight:700;">${score.toFixed(2)} (${grade})</span>`:'—'}
+        </span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// 3.2 프로파일
+function render32setup(){
+  const sel=document.getElementById('v-profile-select');
+  sel.innerHTML=PARTNERS.map(p=>`<option value="${p.id}">${p.name} (${p.type})</option>`).join('');
+}
+function renderProfile(){
+  const pid=document.getElementById('v-profile-select').value;
+  const p=PARTNERS.find(x=>x.id===pid), pr=(state.profiles||{})[pid]||{};
+  const sw=(state.swot||{})[pid]||{}, pcs=(state.pcs||{})[pid]||{};
+  const score=PCS_AXES.reduce((s,a)=>s+(pcs[a.key]||0)*a.weight,0);
+  let grade='—';
+  if(score>=4)grade='S — Strategic Partner';
+  else if(score>=3)grade='A — Growth Partner';
+  else if(score>=2)grade='B — Development Partner';
+  else if(score>0)grade='C — Watch';
+
+  const fields=[{key:'pam',label:'담당 PAM'},{key:'founded',label:'설립연도'},{key:'employees',label:'임직원 수'},{key:'industries',label:'주요 산업'},{key:'renewed',label:'NPN 갱신일'}];
+  const plans=(state.actionPlans||{})[pid]||[];
+
+  document.getElementById('v-profile-content').innerHTML=`
+  <div class="card">
+    <div style="background:var(--navy);color:#fff;margin:-24px -24px 20px;padding:18px 24px;border-radius:var(--radius) var(--radius) 0 0;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:18px;font-weight:700;">${p.name}</span>
+      <span class="badge" style="${TYPE_BADGE[p.type]}">${p.type}</span>
+      <span class="level-badge ${(pr.level||'—')==='Elite'?'level-elite':(pr.level||'—')==='Preferred'?'level-preferred':(pr.level||'—')==='Registered'?'level-registered':'level-none'}">${pr.level||'—'}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+      ${fields.map(f=>`<div><div style="font-size:11px;color:var(--gray-500);font-weight:600;margin-bottom:4px;">${f.label}</div>
+        <div style="font-size:14px;font-weight:600;color:var(--gray-900);">${pr[f.key]||'<span class="empty-cell">미입력</span>'}</div>
+      </div>`).join('')}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="num">B</span> FY별 매출 분석</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>지표</th>${FY_YEARS.map(fy=>`<th>${fy}</th>`).join('')}<th style="background:var(--green);">YoY</th></tr></thead>
+      <tbody>${['Revenue ($K)','Deal Count','Avg Deal Size ($K)'].map((label,ri)=>{
+        const vals=FY_YEARS.map(fy=>+(pr[`prof_${ri}_${fy}`])||0);
+        const yoy=vals[1]>0&&vals[2]>0?((vals[2]/vals[1]-1)*100).toFixed(1)+'%':null;
+        return `<tr><td><strong>${label}</strong></td>${vals.map(v=>`<td>${v?v.toLocaleString():'<span class="empty-cell">—</span>'}</td>`).join('')}
+          <td>${yoy?`<span class="calc-cell${+yoy<0?' neg':''}">${yoy}</span>`:'<span class="empty-cell">—</span>'}</td></tr>`;
+      }).join('')}</tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="num">PCS</span> 경쟁력 평가 요약</div>
+    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+      <div style="font-size:42px;font-weight:700;color:var(--navy);">${score>0?score.toFixed(2):'—'}</div>
+      <div><div style="font-size:12px;color:var(--gray-500);margin-bottom:4px;">PCS 등급</div>
+        <div style="font-size:18px;font-weight:700;color:var(--gray-900);">${grade}</div>
+      </div>
+    </div>
+    <div style="margin-top:16px;display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
+      ${PCS_AXES.map(ax=>`<div style="text-align:center;background:var(--gray-100);border-radius:8px;padding:10px 6px;">
+        <div style="font-size:10px;color:var(--gray-500);margin-bottom:4px;">${ax.label.split('. ')[0]}</div>
+        <div style="font-size:20px;font-weight:700;color:var(--navy);">${pcs[ax.key]||'—'}</div>
+        <div style="font-size:10px;color:var(--gray-500);">/ 5</div>
+      </div>`).join('')}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="num">SWOT</span> SWOT 분석</div>
+    <div class="swot-grid">
+      <div class="swot-cell s"><div class="swot-title">💪 Strengths</div>${sw.s?`<div class="swot-content">${sw.s}</div>`:'<div class="swot-empty">미입력</div>'}</div>
+      <div class="swot-cell w"><div class="swot-title">⚠️ Weaknesses</div>${sw.w?`<div class="swot-content">${sw.w}</div>`:'<div class="swot-empty">미입력</div>'}</div>
+      <div class="swot-cell o"><div class="swot-title">🚀 Opportunities</div>${sw.o?`<div class="swot-content">${sw.o}</div>`:'<div class="swot-empty">미입력</div>'}</div>
+      <div class="swot-cell t"><div class="swot-title">🔥 Threats</div>${sw.t?`<div class="swot-content">${sw.t}</div>`:'<div class="swot-empty">미입력</div>'}</div>
+    </div>
+  </div>
+
+  ${plans.length>0?`<div class="card">
+    <div class="card-title"><span class="num">D</span> 액션 플랜</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>#</th><th>과제</th><th>목표</th><th>기한</th><th>담당</th><th>상태</th></tr></thead>
+      <tbody>${plans.map((pl,i)=>{
+        const sc={'진행 전':'badge-blue','진행 중':'badge-green','완료':'badge-navy'};
+        return `<tr><td style="color:var(--gray-500);">${i+1}</td><td>${pl.task||'—'}</td><td>${pl.goal||'—'}</td><td>${pl.due||'—'}</td><td>${pl.owner||'—'}</td>
+          <td><span class="badge ${sc[pl.status]||'badge-blue'}">${pl.status||'—'}</span></td></tr>`;
+      }).join('')}</tbody>
+    </table></div>
+  </div>`:''}
+  `;
+}
+
+// 정적 콘텐츠
+function buildStaticContent(){
+  const colors=['#76B900','#1A6FA0','#e67e22','#8e44ad','#e74c3c','#27ae60','#2980b9','#f39c12'];
+  document.getElementById('v-comp-list').innerHTML=COMPS.map((c,i)=>`
+    <div class="fw-item" style="border-left-color:${colors[i]};"><div class="fw-title">${c.code} — ${c.name}</div><div class="fw-desc">${c.desc}</div></div>`).join('');
+
+  const kpis=[
+    {k:"FY Revenue",d:"Fiscal Year 기준 Net Revenue (USD)",p:"절대 규모"},
+    {k:"Deal Count",d:"FY 내 클로즈된 Deal 수",p:"영업 활동량"},
+    {k:"YoY Growth",d:"(FY(N)−FY(N-1)) / FY(N-1) × 100",p:"단기 성장"},
+    {k:"CAGR",d:"(FY마지막/FY첫해)^(1/기간)−1",p:"중장기 추세"},
+    {k:"Avg Deal Size",d:"FY Revenue / Deal Count",p:"거래 대형화"},
+    {k:"Comp. Mix",d:"특정 Comp 매출 / 전체 매출",p:"역량 편중 여부"},
+    {k:"HHI",d:"Σ(각 Comp 비중²)",p:"다각화 수준"},
+    {k:"Level-Rev Align",d:"Level 분위 vs 매출 분위 차이",p:"등급 적정성"},
+  ];
+  document.getElementById('v-kpi-body').innerHTML=kpis.map(k=>`<tr><td><strong>${k.k}</strong></td><td style="font-family:monospace;font-size:12px;">${k.d}</td><td>${k.p}</td></tr>`).join('');
+  buildPCSSelect();
+  renderPCS();
+}
+
+// Firebase 실시간 구독 — 어드민이 저장할 때마다 자동 반영
+STATE_REF.on('value', snapshot=>{
+  const saved = snapshot.val();
+  state = saved ? Object.assign({...DEFAULT_STATE}, saved) : {...DEFAULT_STATE};
+  renderAll();
+  setTimeout(renderPositionMap, 300);
+  document.getElementById('last-updated').textContent =
+    '최종 업데이트: ' + new Date().toLocaleTimeString('ko-KR');
+}, err=>{
+  console.error('Firebase read error:', err);
+  document.getElementById('last-updated').textContent = '데이터 로드 실패 ⚠️';
+});
+</script>
+</body>
+</html>
